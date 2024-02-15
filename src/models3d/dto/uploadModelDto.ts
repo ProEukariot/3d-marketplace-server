@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UploadModelDto {
-  @ApiProperty()
+  // @ApiProperty()
   name: string;
 
-  @ApiProperty()
+  // @ApiProperty()
   amount: number;
 }

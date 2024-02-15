@@ -12,18 +12,28 @@ import {
 } from '@nestjs/common';
 import { UploadModelDto } from '../dto/uploadModelDto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { FileStreamService } from 'src/shared/services/FileStreamService';
+import { Repository } from 'typeorm';
+import { Model3d } from 'src/typeorm/entities/Model3d';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/typeorm/entities/User';
+import { Model3dService } from '../services/model3dService';
 
 @Controller('models')
 export class Models3dController {
-  constructor(private readonly fs: FileStreamService) {}
+  constructor(
+    private readonly fs: FileStreamService,
+    private readonly models3dService: Model3dService,
+  ) {}
 
   @Post('upload')
-  uplodModel(@Body() modelDto: UploadModelDto) {
-    console.log('FILEs', modelDto);
+  async uplodModel(@Body() modelDto: UploadModelDto) {
+    const insertedModel3d = await this.models3dService.createModel(
+      modelDto,
+      '35473B73-2CCC-EE11-B4E4-4CD5770B50B8',
+    );
 
-    return;
+    return insertedModel3d;
   }
 
   @Post('upload/files')
