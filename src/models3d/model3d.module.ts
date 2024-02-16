@@ -7,10 +7,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
 import { Model3d } from 'src/typeorm/entities/Model3d';
 import { Model3dService } from './services/model3dService';
+import { File } from 'src/typeorm/entities/File';
 
 @Module({
   controllers: [Models3dController],
   providers: [Model3dService],
-  imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User])],
+  imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User, File])],
 })
 export class Models3dModule {}

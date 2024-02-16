@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class UploadModelDto {
+export class UploadModel3dDto {
   // @ApiProperty()
   name: string;
 

@@ -2,15 +2,20 @@ import {
   Body,
   Controller,
   FileTypeValidator,
+  Get,
   MaxFileSizeValidator,
+  Param,
   ParseFilePipe,
   Post,
+  Res,
+  StreamableFile,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
-import { UploadModelDto } from '../dto/uploadModelDto';
+import { Response } from 'express';
+import { UploadModel3dDto } from '../dto/uploadModel3dDto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileStreamService } from 'src/shared/services/FileStreamService';
 import { Repository } from 'typeorm';
@@ -18,6 +23,7 @@ import { Model3d } from 'src/typeorm/entities/Model3d';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
 import { Model3dService } from '../services/model3dService';
+import { FileMeta } from '../types/FileMeta';
 
 @Controller('models')
 export class Models3dController {
@@ -26,19 +32,21 @@ export class Models3dController {
     private readonly models3dService: Model3dService,
   ) {}
 
+  USER_ID = '35473B73-2CCC-EE11-B4E4-4CD5770B50B8'; // from token
+
   @Post('upload')
-  async uplodModel(@Body() modelDto: UploadModelDto) {
-    const insertedModel3d = await this.models3dService.createModel(
+  async createModel3d(@Body() modelDto: UploadModel3dDto) {
+    const insertedModel3d = await this.models3dService.createModel3d(
       modelDto,
-      '35473B73-2CCC-EE11-B4E4-4CD5770B50B8',
+      this.USER_ID,
     );
 
-    return insertedModel3d;
+    return { insertedId: insertedModel3d.id };
   }
 
   @Post('upload/files')
   @UseInterceptors(FilesInterceptor('files'))
-  uplodModelFile(
+  async uplodModel3dFiles(
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
@@ -48,10 +56,56 @@ export class Models3dController {
       }),
     )
     files: Array<Express.Multer.File>,
+    @Body('model3dId') model3dId: string,
   ) {
-    console.log('FILEs', files);
-    // this.fs.writeFile(files[0], files[0].originalname, '/uploads');
+    const tasks = files.map(async (file) => {
+      const ext = file.originalname.split('.').pop();
+      const size = file.size;
 
-    return;
+      const fileMeta: FileMeta = { size, ext };
+
+      const createdFile = await this.models3dService.createFile(
+        fileMeta,
+        model3dId,
+      );
+
+      file.originalname = `${createdFile.id}.${ext}`;
+
+      const userDir = `/uploads/user-${this.USER_ID}`;
+
+      this.fs.createDirectory(userDir);
+
+      const ws = this.fs.getWriteStream(file.originalname, userDir);
+      ws.write(file.buffer);
+      ws.end();
+
+      return createdFile;
+    });
+
+    const insertedFiles = await Promise.all(tasks);
+
+    const ids = insertedFiles.map((file) => file.id);
+
+    return { insertedIds: ids };
+  }
+
+  @Get('download/files/:id')
+  async downloadModel3dFiles(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const fileMeta = await this.models3dService.getFile(id);
+
+    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
+    const fileDir = `uploads/user-${this.USER_ID}`;
+    const ext = fileMeta.ext;
+    const model3dName = fileMeta.model3d.name;
+
+    const file = this.fs.getReadStream(fileName, fileDir);
+    res.set({
+      'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
+    });
+
+    return new StreamableFile(file);
   }
 }

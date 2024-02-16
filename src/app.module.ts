@@ -6,6 +6,7 @@ import { FileStreamService } from './shared/services/FileStreamService';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './typeorm/entities/User';
 import { Model3d } from './typeorm/entities/Model3d';
+import { File } from './typeorm/entities/File';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { Model3d } from './typeorm/entities/Model3d';
       username: 'Admin',
       password: 'Admin',
       database: 'Models3dDb',
-      entities: [User, Model3d],
+      entities: [User, Model3d, File],
       // autoLoadEntities: true,
       synchronize: true,
       options: { encrypt: false, trustServerCertificate: true },
