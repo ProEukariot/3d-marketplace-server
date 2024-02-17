@@ -1,7 +1,7 @@
 import {
   Body,
   Controller,
-  FileTypeValidator,
+  // FileTypeValidator,
   Get,
   MaxFileSizeValidator,
   Param,
@@ -24,6 +24,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
 import { Model3dService } from '../services/model3dService';
 import { FileMeta } from '../types/FileMeta';
+import { FileValidationPipe } from 'src/shared/pipes/FileValidationPipe';
+import { FileTypeValidator } from 'src/shared/validators/FileTypeValidator';
+import { UniqueTypeValidator } from 'src/shared/validators/UniqueTypeValidator';
 
 @Controller('models')
 export class Models3dController {
@@ -51,7 +54,13 @@ export class Models3dController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 100_000 }),
-          new FileTypeValidator({ fileType: 'pdf' }),
+          // new FileTypeValidator({ fileType: 'pdf,txt' }),
+        ],
+      }),
+      new FileValidationPipe({
+        validators: [
+          new FileTypeValidator({ types: ['pdf', 'jpg'] }),
+          new UniqueTypeValidator(),
         ],
       }),
     )
