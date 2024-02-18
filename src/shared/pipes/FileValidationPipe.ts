@@ -19,7 +19,6 @@ export class FileValidationPipe implements PipeTransform {
 
   transform(value: Array<Express.Multer.File>, metadata: ArgumentMetadata) {
     const error = this.getError(value);
-    console.log(error);
     
     if (error) throw new BadRequestException(error.message);
 

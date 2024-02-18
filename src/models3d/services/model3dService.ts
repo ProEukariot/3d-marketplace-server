@@ -20,7 +20,7 @@ export class Model3dService {
 
   async createModel3d(model3dBody: Model3dBody, userId: string) {
     try {
-      const user = await this.userRepository.findOneBy({
+      const user = await this.userRepository.findOneByOrFail({
         id: userId,
       });
 
@@ -37,7 +37,9 @@ export class Model3dService {
 
   async createFile(fileMeta: FileMeta, model3dId: string) {
     try {
-      const model3d = await this.model3dRepository.findOneBy({ id: model3dId });
+      const model3d = await this.model3dRepository.findOneByOrFail({
+        id: model3dId,
+      });
 
       const file = new File();
       file.size = fileMeta.size;

@@ -6,6 +6,7 @@ import {
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
+  ParseUUIDPipe,
   Post,
   Res,
   StreamableFile,
@@ -27,6 +28,7 @@ import { FileMeta } from '../types/FileMeta';
 import { FileValidationPipe } from 'src/shared/pipes/FileValidationPipe';
 import { FileTypeValidator } from 'src/shared/validators/FileTypeValidator';
 import { UniqueTypeValidator } from 'src/shared/validators/UniqueTypeValidator';
+import { UploadModel3dFilesDto } from '../dto/uploadModel3dFilesDto';
 
 @Controller('models')
 export class Models3dController {
@@ -65,7 +67,7 @@ export class Models3dController {
       }),
     )
     files: Array<Express.Multer.File>,
-    @Body('model3dId') model3dId: string,
+    @Body() modelFilesDto: UploadModel3dFilesDto,
   ) {
     const tasks = files.map(async (file) => {
       const ext = file.originalname.split('.').pop();
@@ -75,7 +77,7 @@ export class Models3dController {
 
       const createdFile = await this.models3dService.createFile(
         fileMeta,
-        model3dId,
+        modelFilesDto.model3dId,
       );
 
       file.originalname = `${createdFile.id}.${ext}`;
@@ -100,7 +102,7 @@ export class Models3dController {
 
   @Get('download/files/:id')
   async downloadModel3dFiles(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
     const fileMeta = await this.models3dService.getFile(id);
