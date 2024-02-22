@@ -18,7 +18,7 @@ import {
 import { Response } from 'express';
 import { UploadModel3dDto } from '../dto/uploadModel3dDto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { FileStreamService } from 'src/shared/services/FileStreamService';
+import { FileStreamService } from 'src/shared/services/FileStream.service';
 import { Repository } from 'typeorm';
 import { Model3d } from 'src/typeorm/entities/Model3d';
 import { InjectRepository } from '@nestjs/typeorm';

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Models3dController } from './controllers/model3d.controller';
 import { MulterModule } from '@nestjs/platform-express';
-import { FileStreamService } from 'src/shared/services/FileStreamService';
+import { FileStreamService } from 'src/shared/services/FileStream.service';
 import { AppServicesModule } from 'src/shared/services/AppServices.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';

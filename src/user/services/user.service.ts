@@ -19,4 +19,16 @@ export class UserService {
 
     return await this.userRepository.save(newUser);
   }
+
+  async getUserById(id: string) {
+    const user = await this.userRepository.findOneByOrFail({ id });
+
+    return user;
+  }
+
+  async getUserByUsername(username: string) {
+    const user = await this.userRepository.findOneByOrFail({ username });
+
+    return user;
+  }
 }

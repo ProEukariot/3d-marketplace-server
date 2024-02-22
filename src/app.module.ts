@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Models3dModule } from './models3d/model3d.module';
-import { FileStreamService } from './shared/services/FileStreamService';
+import { FileStreamService } from './shared/services/FileStream.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './typeorm/entities/User';
 import { Model3d } from './typeorm/entities/Model3d';

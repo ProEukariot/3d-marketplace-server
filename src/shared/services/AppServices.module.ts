@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { FileStreamService } from './FileStreamService';
+import { FileStreamService } from './FileStream.service';
+import { HashService } from './hash.service';
 
 @Module({
   imports: [],
   controllers: [],
-  providers: [FileStreamService],
-  exports: [FileStreamService],
+  providers: [FileStreamService, HashService],
+  exports: [FileStreamService, HashService],
 })
 export class AppServicesModule {}
