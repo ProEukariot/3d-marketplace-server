@@ -7,10 +7,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './typeorm/entities/User';
 import { Model3d } from './typeorm/entities/Model3d';
 import { File } from './typeorm/entities/File';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
+import { IsUniqueConstraint } from './shared/validators/isUniqueConstraint';
+import { CompareToConstraint } from './shared/validators/compareToConstraint';
 
 @Module({
   imports: [
     Models3dModule,
+    AuthModule,
+    UserModule,
     TypeOrmModule.forRoot({
       type: 'mssql',
       host: 'localhost',

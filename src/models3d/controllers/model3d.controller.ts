@@ -23,7 +23,7 @@ import { Repository } from 'typeorm';
 import { Model3d } from 'src/typeorm/entities/Model3d';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
-import { Model3dService } from '../services/model3dService';
+import { Model3dService } from '../services/model3d.service';
 import { FileMeta } from '../types/FileMeta';
 import { FileValidationPipe } from 'src/shared/pipes/FileValidationPipe';
 import { FileTypeValidator } from 'src/shared/validators/FileTypeValidator';

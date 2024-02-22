@@ -6,7 +6,7 @@ import { AppServicesModule } from 'src/shared/services/AppServices.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
 import { Model3d } from 'src/typeorm/entities/Model3d';
-import { Model3dService } from './services/model3dService';
+import { Model3dService } from './services/model3d.service';
 import { File } from 'src/typeorm/entities/File';
 
 @Module({
