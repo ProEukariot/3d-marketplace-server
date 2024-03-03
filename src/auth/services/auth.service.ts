@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -27,11 +28,11 @@ export class AuthService {
       user = await this.userService.getUserByUsername(username);
     } catch (err) {
       this.logger.error(err);
-      throw new InternalServerErrorException(err);
+      throw new BadRequestException(`User ${username} not found`);
     }
 
     if (!(await this.hashService.compareHash(password, user.hash)))
-      throw new UnauthorizedException();
+      throw new UnauthorizedException(`Wrong password`);
 
     const payload = {
       sub: user.id,

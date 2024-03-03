@@ -8,6 +8,7 @@ import {
   ParseFilePipe,
   ParseUUIDPipe,
   Post,
+  Req,
   Res,
   StreamableFile,
   UploadedFile,
@@ -15,7 +16,7 @@ import {
   UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { UploadModel3dDto } from '../dto/uploadModel3dDto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileStreamService } from 'src/shared/services/FileStream.service';
@@ -37,13 +38,15 @@ export class Models3dController {
     private readonly models3dService: Model3dService,
   ) {}
 
-  USER_ID = '35473B73-2CCC-EE11-B4E4-4CD5770B50B8'; // from token
+  // USER_ID = '9D5B415A-EDD8-EE11-B4EB-4CD5770B50B8'; // from token
 
   @Post('upload')
-  async createModel3d(@Body() modelDto: UploadModel3dDto) {
+  async createModel3d(@Body() modelDto: UploadModel3dDto, @Req() req: Request) {
+    const userId = req['user'].sub;
+
     const insertedModel3d = await this.models3dService.createModel3d(
       modelDto,
-      this.USER_ID,
+      userId,
     );
 
     return { insertedId: insertedModel3d.id };
@@ -55,20 +58,23 @@ export class Models3dController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 100_000 }),
+          new MaxFileSizeValidator({ maxSize: 10_000_000 }),
           // new FileTypeValidator({ fileType: 'pdf,txt' }),
         ],
       }),
       new FileValidationPipe({
         validators: [
-          new FileTypeValidator({ types: ['pdf', 'jpg'] }),
+          new FileTypeValidator({ types: ['glb'] }),
           new UniqueTypeValidator(),
         ],
       }),
     )
     files: Array<Express.Multer.File>,
     @Body() modelFilesDto: UploadModel3dFilesDto,
+    @Req() req: Request,
   ) {
+    const userId = req['user'].sub;
+
     const tasks = files.map(async (file) => {
       const ext = file.originalname.split('.').pop();
       const size = file.size;
@@ -82,7 +88,7 @@ export class Models3dController {
 
       file.originalname = `${createdFile.id}.${ext}`;
 
-      const userDir = `/uploads/user-${this.USER_ID}`;
+      const userDir = `/uploads/user-${userId}`;
 
       this.fs.createDirectory(userDir);
 
@@ -104,17 +110,21 @@ export class Models3dController {
   async downloadModel3dFiles(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
+    const userId = req['user'].sub;
+
     const fileMeta = await this.models3dService.getFile(id);
 
     const fileName = `${fileMeta.id}.${fileMeta.ext}`;
-    const fileDir = `uploads/user-${this.USER_ID}`;
+    const fileDir = `uploads/user-${userId}`;
     const ext = fileMeta.ext;
     const model3dName = fileMeta.model3d.name;
 
     const file = this.fs.getReadStream(fileName, fileDir);
     res.set({
-      'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
+      'Content-Type': 'model/gltf-binary',
+      // 'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
     });
 
     return new StreamableFile(file);

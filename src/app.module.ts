@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { IsUniqueConstraint } from './shared/validators/isUniqueConstraint';
 import { CompareToConstraint } from './shared/validators/compareToConstraint';
+import { AuthGuard } from './shared/guards/auth.guard';
 
 @Module({
   imports: [
@@ -31,7 +32,13 @@ import { CompareToConstraint } from './shared/validators/compareToConstraint';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'APP_GUARD',
+      useClass: AuthGuard,
+    },
+  ],
   exports: [],
 })
 export class AppModule {}
