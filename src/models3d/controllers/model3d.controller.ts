@@ -6,6 +6,7 @@ import {
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   Req,
@@ -30,6 +31,8 @@ import { FileValidationPipe } from 'src/shared/pipes/FileValidationPipe';
 import { FileTypeValidator } from 'src/shared/validators/FileTypeValidator';
 import { UniqueTypeValidator } from 'src/shared/validators/UniqueTypeValidator';
 import { UploadModel3dFilesDto } from '../dto/uploadModel3dFilesDto';
+import { Public } from 'src/utils/skipAuth';
+import { PageParams } from '../dto/pageParams';
 
 @Controller('models')
 export class Models3dController {
@@ -38,7 +41,9 @@ export class Models3dController {
     private readonly models3dService: Model3dService,
   ) {}
 
-  // USER_ID = '9D5B415A-EDD8-EE11-B4EB-4CD5770B50B8'; // from token
+  @Public()
+  @Get('list')
+  getModels3d() {}
 
   @Post('upload')
   async createModel3d(@Body() modelDto: UploadModel3dDto, @Req() req: Request) {
@@ -106,13 +111,14 @@ export class Models3dController {
     return { insertedIds: ids };
   }
 
+  @Public()
   @Get('download/files/:id')
   async downloadModel3dFiles(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
   ) {
-    const userId = req['user'].sub;
+    const user = await this.models3dService.getUserByFileId(id);
+    const userId = user.id;
 
     const fileMeta = await this.models3dService.getFile(id);
 
@@ -124,9 +130,19 @@ export class Models3dController {
     const file = this.fs.getReadStream(fileName, fileDir);
     res.set({
       'Content-Type': 'model/gltf-binary',
-      // 'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
+      'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
     });
 
     return new StreamableFile(file);
+  }
+
+  @Public()
+  @Get(':page')
+  async getModels3dPage(@Param() params: PageParams) {
+    console.log(params.page);
+    
+    const models = await this.models3dService.getPage(params.page);
+
+    return models;
   }
 }

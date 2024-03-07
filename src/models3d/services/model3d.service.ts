@@ -64,4 +64,26 @@ export class Model3dService {
       throw error;
     }
   }
+
+  async getUserByFileId(fileId: string) {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    const user = await queryBuilder
+      .leftJoinAndSelect('user.models', 'models')
+      .leftJoinAndSelect('models.files', 'files')
+      .getOne();
+
+    return user;
+  }
+
+  async getPage(page: number) {
+    const pageSize = 5;
+
+    const items = await this.model3dRepository.find({
+      skip: (page - 1) * pageSize,
+      take: page,
+    });
+
+    return items;
+  }
 }
