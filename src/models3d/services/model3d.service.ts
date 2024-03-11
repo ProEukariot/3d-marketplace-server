@@ -52,38 +52,55 @@ export class Model3dService {
     }
   }
 
-  async getFile(id: string) {
-    try {
-      return await this.filesRepository.findOneOrFail({
-        where: { id },
-        relations: {
-          model3d: true,
-        },
-      });
-    } catch (error) {
-      throw error;
-    }
-  }
+  // async getFile(id: string) {
+  //   try {
+  //     return await this.filesRepository.findOneOrFail({
+  //       where: { id },
+  //       relations: {
+  //         model3d: true,
+  //       },
+  //     });
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 
-  async getUserByFileId(fileId: string) {
-    const queryBuilder = this.userRepository.createQueryBuilder('user');
+  // async getUserByFileId(fileId: string) {
+  //   const queryBuilder = this.userRepository.createQueryBuilder('user');
 
-    const user = await queryBuilder
-      .leftJoinAndSelect('user.models', 'models')
-      .leftJoinAndSelect('models.files', 'files')
-      .getOne();
+  //   const user = await queryBuilder
+  //     .leftJoinAndSelect('user.models', 'models')
+  //     .leftJoinAndSelect('models.files', 'files')
+  //     .getOne();
 
-    return user;
-  }
+  //   return user;
+  // }
 
   async getPage(page: number) {
-    const pageSize = 5;
+    const pageSize = 4;
 
     const items = await this.model3dRepository.find({
       skip: (page - 1) * pageSize,
-      take: page,
+      take: pageSize,
     });
 
     return items;
+  }
+
+  async getModel3d(id: string) {
+    const model = await this.model3dRepository.findOne({
+      where: { id },
+      relations: { user: true },
+    });
+
+    return model;
+  }
+
+  async getFileByModel3d(id: string, ext?: string) {
+    const file = await this.filesRepository.findOne({
+      where: { model3d: { id }, ext },
+    });
+
+    return file;
   }
 }

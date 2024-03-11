@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
   StreamableFile,
@@ -112,37 +113,46 @@ export class Models3dController {
   }
 
   @Public()
-  @Get('download/files/:id')
-  async downloadModel3dFiles(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const user = await this.models3dService.getUserByFileId(id);
-    const userId = user.id;
-
-    const fileMeta = await this.models3dService.getFile(id);
-
-    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
-    const fileDir = `uploads/user-${userId}`;
-    const ext = fileMeta.ext;
-    const model3dName = fileMeta.model3d.name;
-
-    const file = this.fs.getReadStream(fileName, fileDir);
-    res.set({
-      'Content-Type': 'model/gltf-binary',
-      'Content-Disposition': `attachment; filename="${model3dName}.${ext}"`,
-    });
-
-    return new StreamableFile(file);
-  }
-
-  @Public()
   @Get(':page')
   async getModels3dPage(@Param() params: PageParams) {
-    console.log(params.page);
-    
     const models = await this.models3dService.getPage(params.page);
 
     return models;
+  }
+
+  // @Public()
+  // @Get(':id/file')
+  // async getFilebyModel3dId(@Param('id') id, @Query('ext') ext: string) {
+  //   const model = await this.models3dService.getFilebyModel3dId(id, ext);
+
+  //   return model;
+  // }
+
+  @Public()
+  @Get('download/:id/file')
+  async getModel3dFile(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res({ passthrough: true }) res: Response,
+    @Query('ext') ext: string,
+  ) {
+    const model3d = await this.models3dService.getModel3d(id);
+
+    const user = model3d.user;
+    const userId = user.id;
+
+    const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
+
+    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
+    const fileDir = `uploads/user-${userId}`;
+    // const fileExt = fileMeta.ext;
+    // const model3dName = model3d.name;
+
+    const file = this.fs.getReadStream(fileName, fileDir);
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      // 'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
+    });
+
+    return new StreamableFile(file);
   }
 }
