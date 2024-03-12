@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Model3d } from 'src/typeorm/entities/Model3d';
 import { User } from 'src/typeorm/entities/User';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { File } from 'src/typeorm/entities/File';
 import { FileMeta } from '../types/FileMeta';
 import { Model3dBody } from '../types/Model3dBody';
+import { SavedModel } from 'src/typeorm/entities/SavedModels';
 
 @Injectable()
 export class Model3dService {
@@ -16,6 +17,8 @@ export class Model3dService {
     private readonly model3dRepository: Repository<Model3d>,
     @InjectRepository(File)
     private readonly filesRepository: Repository<File>,
+    @InjectRepository(SavedModel)
+    private readonly savedModelsRepository: Repository<SavedModel>,
   ) {}
 
   async createModel3d(model3dBody: Model3dBody, userId: string) {
@@ -102,5 +105,37 @@ export class Model3dService {
     });
 
     return file;
+  }
+
+  async getFilesByModel3d(model3dId: string) {
+    const files = await this.filesRepository.find({
+      where: { model3d: { id: model3dId } },
+    });
+
+    return files;
+  }
+
+  async saveUsersModel3d(model3dId: string, userId: string) {
+    try {
+      return await this.savedModelsRepository.insert({ userId, model3dId });
+    } catch (error) {
+      throw error;
+    }
+
+    // const userPromise = this.userRepository.findOneOrFail({
+    //   where: { id: userId },
+    //   select: { id: true },
+    // });
+    // const model3dPromise = this.model3dRepository.findOneOrFail({
+    //   where: { id: model3dId },
+    //   select: { id: true },
+    // });
+
+    // const [user, model3d] = await Promise.all([userPromise, model3dPromise]);
+
+    // const savedModel = new SavedModel();
+    // savedModel.model3d = model3d;
+    // savedModel.user = user;
+    // return await this.savedModelsRepository.save(savedModel);
   }
 }

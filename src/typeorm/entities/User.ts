@@ -2,12 +2,15 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinTable,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Model3d } from './Model3d';
+import { SavedModel } from './SavedModels';
 
-@Entity()
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -26,4 +29,11 @@ export class User {
 
   @OneToMany(() => Model3d, (model3d) => model3d.user)
   models: Model3d[];
+
+  // @ManyToMany(() => Model3d)
+  // @JoinTable({name: "saved_models"})
+  // savedModels: Model3d[];
+
+  @OneToMany(() => SavedModel, (savedModel)=>savedModel.user)
+  savedModels: SavedModel[];
 }

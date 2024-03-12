@@ -8,8 +8,9 @@ import {
 } from 'typeorm';
 import { User } from './User';
 import { File } from './File';
+import { SavedModel } from './SavedModels';
 
-@Entity()
+@Entity('models')
 export class Model3d {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,6 +29,9 @@ export class Model3d {
 
   @OneToMany(() => File, (file) => file.model3d)
   files: File[];
+
+  @OneToMany(() => SavedModel, (savedModel)=>savedModel.model3d)
+  savedModels: SavedModel[];
 
   // @ManyToOne(() => Model3DCategory)
   // category: Model3DCategory;

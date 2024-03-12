@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   // FileTypeValidator,
   Get,
+  InternalServerErrorException,
   MaxFileSizeValidator,
+  NotFoundException,
   Param,
   ParseFilePipe,
   ParseIntPipe,
@@ -22,7 +25,7 @@ import { Response, Request } from 'express';
 import { UploadModel3dDto } from '../dto/uploadModel3dDto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileStreamService } from 'src/shared/services/FileStream.service';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Model3d } from 'src/typeorm/entities/Model3d';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/User';
@@ -34,6 +37,7 @@ import { UniqueTypeValidator } from 'src/shared/validators/UniqueTypeValidator';
 import { UploadModel3dFilesDto } from '../dto/uploadModel3dFilesDto';
 import { Public } from 'src/utils/skipAuth';
 import { PageParams } from '../dto/pageParams';
+import { SaveModel3dDto } from '../dto/saveModel3dDto';
 
 @Controller('models')
 export class Models3dController {
@@ -129,7 +133,7 @@ export class Models3dController {
   // }
 
   @Public()
-  @Get('download/:id/file')
+  @Get('preview/:id/file')
   async getModel3dFile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Res({ passthrough: true }) res: Response,
@@ -154,5 +158,67 @@ export class Models3dController {
     });
 
     return new StreamableFile(file);
+  }
+
+  @Public()
+  @Get(':id/files')
+  async getFilesMetaForModel3d(@Param('id', new ParseUUIDPipe()) id: string) {
+    const filesMeta = await this.models3dService.getFilesByModel3d(id);
+
+    console.log(filesMeta);
+
+    return filesMeta;
+  }
+
+  @Public()
+  @Get('download/:id/file/:ext')
+  async downloadModel3dFile(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('ext') ext: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const model3d = await this.models3dService.getModel3d(id);
+    if (!model3d) return new NotFoundException('File not found');
+
+    const user = model3d.user;
+    const userId = user.id;
+
+    const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
+    if (!fileMeta) return new NotFoundException('File not found');
+
+    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
+    const fileDir = `uploads/user-${userId}`;
+    const fileExt = fileMeta.ext;
+    const model3dName = model3d.name;
+
+    const file = this.fs.getReadStream(fileName, fileDir);
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
+    });
+
+    return new StreamableFile(file);
+  }
+
+  @Post('save')
+  async saveModel3d(@Body() modelDto: SaveModel3dDto, @Req() req: Request) {
+    const userId = req['user'].sub;
+
+    try {
+      const insertedResult = await this.models3dService.saveUsersModel3d(
+        modelDto.id,
+        userId,
+      );
+
+      return insertedResult;
+    } catch (error) {
+      if (error.number == 2627) {
+        return new BadRequestException(
+          'The 3D model is already saved for that user',
+        );
+      }
+
+      return new InternalServerErrorException('An unexpected error occurred');
+    }
   }
 }

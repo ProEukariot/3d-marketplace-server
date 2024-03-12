@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Model3d } from './Model3d';
 
-@Entity()
+@Entity('files')
 export class File {
   @PrimaryGeneratedColumn('uuid')
   id: string;

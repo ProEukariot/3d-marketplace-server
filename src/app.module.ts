@@ -12,6 +12,7 @@ import { UserModule } from './user/user.module';
 import { IsUniqueConstraint } from './shared/validators/isUniqueConstraint';
 import { CompareToConstraint } from './shared/validators/compareToConstraint';
 import { AuthGuard } from './shared/guards/auth.guard';
+import { SavedModel } from './typeorm/entities/SavedModels';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { AuthGuard } from './shared/guards/auth.guard';
       username: 'Admin',
       password: 'Admin',
       database: 'Models3dDb',
-      entities: [User, Model3d, File],
+      entities: [User, Model3d, File, SavedModel],
       // autoLoadEntities: true,
       synchronize: true,
       options: { encrypt: false, trustServerCertificate: true },
