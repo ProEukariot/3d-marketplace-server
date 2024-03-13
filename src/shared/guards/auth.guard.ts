@@ -1,9 +1,11 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { SKIP_AUTH_KEY } from 'src/utils/skipAuth';
@@ -13,6 +15,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -31,9 +34,11 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    const secret = this.config.getOrThrow<string>('jwt.secret');
+
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: 'SECRET',
+        secret,
       });
 
       req['user'] = payload;

@@ -2,35 +2,28 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Models3dModule } from './models3d/model3d.module';
-import { FileStreamService } from './shared/services/FileStream.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './typeorm/entities/User';
-import { Model3d } from './typeorm/entities/Model3d';
-import { File } from './typeorm/entities/File';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { IsUniqueConstraint } from './shared/validators/isUniqueConstraint';
-import { CompareToConstraint } from './shared/validators/compareToConstraint';
 import { AuthGuard } from './shared/guards/auth.guard';
-import { SavedModel } from './typeorm/entities/SavedModels';
+import { CheckoutModule } from './checkout/checkout.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import typeormConfig from 'config/typeorm.config';
+import jwtConfig from 'config/jwt.config';
 
 @Module({
   imports: [
     Models3dModule,
     AuthModule,
     UserModule,
-    TypeOrmModule.forRoot({
-      type: 'mssql',
-      host: 'localhost',
-      port: 1433,
-      username: 'Admin',
-      password: 'Admin',
-      database: 'Models3dDb',
-      entities: [User, Model3d, File, SavedModel],
-      // autoLoadEntities: true,
-      synchronize: true,
-      options: { encrypt: false, trustServerCertificate: true },
+    CheckoutModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        configService.get<TypeOrmModuleOptions>('typeorm'),
     }),
+    ConfigModule.forRoot({ isGlobal: true, load: [typeormConfig, jwtConfig] }),
   ],
   controllers: [AppController],
   providers: [

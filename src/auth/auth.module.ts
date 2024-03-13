@@ -10,6 +10,7 @@ import { AppValidatorsModule } from 'src/shared/validators/AppValidators.module'
 import { HashService } from 'src/shared/services/hash.service';
 import { AppServicesModule } from 'src/shared/services/AppServices.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   controllers: [AuthController],
@@ -18,10 +19,16 @@ import { JwtModule } from '@nestjs/jwt';
     UserModule,
     AppValidatorsModule,
     AppServicesModule,
-    JwtModule.register({
+    // JwtModule.register({
+    //   global: true,
+    //   secret: 'SECRET',
+    //   signOptions: { expiresIn: '3600s' },
+    // })
+    JwtModule.registerAsync({
       global: true,
-      secret: 'SECRET',
-      signOptions: { expiresIn: '3600s' },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => configService.get('jwt'),
     }),
   ],
   exports: [AuthService],
