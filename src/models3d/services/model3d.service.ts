@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Model3d } from 'src/typeorm/entities/Model3d';
-import { User } from 'src/typeorm/entities/User';
+import { Model3d } from 'src/typeorm/entities/model3d';
+import { User } from 'src/typeorm/entities/user';
 import { QueryFailedError, Repository } from 'typeorm';
-import { File } from 'src/typeorm/entities/File';
-import { FileMeta } from '../types/FileMeta';
-import { Model3dBody } from '../types/Model3dBody';
-import { SavedModel } from 'src/typeorm/entities/SavedModels';
+import { File } from 'src/typeorm/entities/file';
+import { FileMeta } from '../types/file-meta';
+import { Model3dBody } from '../types/model3d-body';
+import { SavedModel } from 'src/typeorm/entities/saved-models';
 
 @Injectable()
 export class Model3dService {

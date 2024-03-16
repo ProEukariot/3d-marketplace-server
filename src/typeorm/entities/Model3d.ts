@@ -6,9 +6,9 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from './User';
-import { File } from './File';
-import { SavedModel } from './SavedModels';
+import { User } from './user';
+import { File } from './file';
+import { SavedModel } from './saved-models';
 
 @Entity('models')
 export class Model3d {

@@ -3,7 +3,7 @@ import {
     registerDecorator,
     ValidationDecoratorOptions,
   } from 'class-validator';
-  import { IsUniqueConstraint } from './isUniqueConstraint';
+  import { IsUniqueConstraint } from './is-unique-constraint';
   
   export type isUniqueOptions = {
     table: string;

@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Model3d } from './Model3d';
+import { Model3d } from './model3d';
 
 @Entity('files')
 export class File {

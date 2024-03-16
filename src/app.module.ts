@@ -10,6 +10,8 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeormConfig from 'config/typeorm.config';
 import jwtConfig from 'config/jwt.config';
+import stripeConfig from 'config/stripe.config';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -20,16 +22,19 @@ import jwtConfig from 'config/jwt.config';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) =>
+      useFactory: async (configService: ConfigService) =>
         configService.get<TypeOrmModuleOptions>('typeorm'),
     }),
-    ConfigModule.forRoot({ isGlobal: true, load: [typeormConfig, jwtConfig] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [typeormConfig, jwtConfig, stripeConfig],
+    }),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     {
-      provide: 'APP_GUARD',
+      provide: APP_GUARD,
       useClass: AuthGuard,
     },
   ],

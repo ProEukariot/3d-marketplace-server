@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { SKIP_AUTH_KEY } from 'src/utils/skipAuth';
+import { SKIP_AUTH_KEY } from 'src/utils/skip-auth';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

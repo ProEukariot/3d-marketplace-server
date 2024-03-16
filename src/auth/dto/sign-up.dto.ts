@@ -6,15 +6,15 @@ import {
   Length,
   Matches,
 } from 'class-validator';
-import { CompareTo } from 'src/shared/validators/compareTo';
-import { isUnique } from 'src/shared/validators//isUnique';
+import { CompareTo } from 'src/shared/validators/compare-to';
+import { isUnique } from 'src/shared/validators/is-unique';
 
 export class SignUpDto {
   @Length(8, 20)
   @IsNotEmpty()
   @IsString()
   @Matches(/^[a-zA-Z0-9_]+$/)
-  @isUnique({ table: 'user', column: 'username' })
+  @isUnique({ table: 'users', column: 'username' })
   username: string;
 
   @Length(8, 20)
@@ -30,6 +30,6 @@ export class SignUpDto {
   @IsNotEmpty()
   @IsString()
   @IsEmail()
-  @isUnique({ table: 'user', column: 'email' })
+  @isUnique({ table: 'users', column: 'email' })
   email: string;
 }

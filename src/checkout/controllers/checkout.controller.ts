@@ -1,13 +1,20 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Public } from 'src/utils/skipAuth';
+import { Public } from 'src/utils/skip-auth';
+import Stripe from 'stripe';
+import { STRIPE_CLIENT } from '../constants';
 
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(@Inject(STRIPE_CLIENT) private stripe: Stripe) {}
 
-  @Get('testEnv')
-  testEnv() {
-    return `testEnv return data: ${this.config.get<string>('TEST')}`;
+  @Public()
+  @Get('test')
+  async test() {
+    const clients = await this.stripe.customers.list();
+
+    console.log(clients);
+
+    return clients;
   }
 }

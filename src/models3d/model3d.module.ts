@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
-import { Models3dController } from './controllers/model3d.controller';
+import { Model3dController } from './controllers/model3d.controller';
 import { MulterModule } from '@nestjs/platform-express';
-import { FileStreamService } from 'src/shared/services/FileStream.service';
-import { AppServicesModule } from 'src/shared/services/AppServices.module';
+import { FileStreamService } from 'src/shared/services/file-stream.service';
+import { AppServicesModule } from 'src/shared/services/app-services.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/typeorm/entities/User';
-import { Model3d } from 'src/typeorm/entities/Model3d';
+import { User } from 'src/typeorm/entities/user';
+import { Model3d } from 'src/typeorm/entities/model3d';
 import { Model3dService } from './services/model3d.service';
-import { File } from 'src/typeorm/entities/File';
-import { SavedModel } from 'src/typeorm/entities/SavedModels';
+import { File } from 'src/typeorm/entities/file';
+import { SavedModel } from 'src/typeorm/entities/saved-models';
 
 @Module({
-  controllers: [Models3dController],
+  controllers: [Model3dController],
   providers: [Model3dService],
   imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User, File, SavedModel])],
 })

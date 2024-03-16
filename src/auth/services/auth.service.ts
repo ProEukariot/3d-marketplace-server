@@ -8,8 +8,8 @@ import {
 import { HashService } from 'src/shared/services/hash.service';
 import { UserService } from 'src/user/services/user.service';
 import { JwtService } from '@nestjs/jwt';
-import { User } from 'src/typeorm/entities/User';
-import { Token } from 'src/shared/types/Token';
+import { User } from 'src/typeorm/entities/user';
+import { Token } from 'src/shared/types/token';
 
 @Injectable()
 export class AuthService {

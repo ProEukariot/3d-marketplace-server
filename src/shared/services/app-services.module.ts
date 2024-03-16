@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { FileStreamService } from './FileStream.service';
+import { FileStreamService } from './file-stream.service';
 import { HashService } from './hash.service';
 
 @Module({

@@ -3,7 +3,7 @@ import {
     ValidationOptions,
     ValidationArguments,
   } from 'class-validator';
-  import { CompareToConstraint } from './compareToConstraint';
+  import { CompareToConstraint } from './compare-to-constraint';
   
   export function CompareTo(
     propName: string,

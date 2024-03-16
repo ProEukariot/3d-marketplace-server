@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CompareToConstraint } from './compareToConstraint';
-import { IsUniqueConstraint } from './isUniqueConstraint';
+import { CompareToConstraint } from './compare-to-constraint';
+import { IsUniqueConstraint } from './is-unique-constraint';
 
 @Module({
   imports: [],

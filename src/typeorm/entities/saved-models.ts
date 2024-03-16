@@ -6,8 +6,8 @@ import {
   PrimaryColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Model3d } from './Model3d';
-import { User } from './User';
+import { Model3d } from './model3d';
+import { User } from './user';
 
 @Entity('savedModels')
 export class SavedModel {

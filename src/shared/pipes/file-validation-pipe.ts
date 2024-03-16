@@ -4,7 +4,7 @@ import {
   Injectable,
   PipeTransform,
 } from '@nestjs/common';
-import { FileTypeValidator } from '../validators/FileTypeValidator';
+import { FileTypeValidator } from '../validators/file-type-validator';
 import { ValidatorConstraintInterface } from 'class-validator';
 
 export type FileValidationOptions = {

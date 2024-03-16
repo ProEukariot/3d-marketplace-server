@@ -1,9 +1,9 @@
 import { registerAs } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Model3d } from 'src/typeorm/entities/Model3d';
-import { File } from 'src/typeorm/entities/File';
-import { SavedModel } from 'src/typeorm/entities/SavedModels';
-import { User } from 'src/typeorm/entities/User';
+import { Model3d } from 'src/typeorm/entities/model3d';
+import { File } from 'src/typeorm/entities/file';
+import { SavedModel } from 'src/typeorm/entities/saved-models';
+import { User } from 'src/typeorm/entities/user';
 
 export default registerAs(
   'typeorm',

@@ -22,25 +22,25 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { UploadModel3dDto } from '../dto/uploadModel3dDto';
+import { UploadModel3dDto } from '../dto/upload-model3d.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { FileStreamService } from 'src/shared/services/FileStream.service';
+import { FileStreamService } from 'src/shared/services/file-stream.service';
 import { QueryFailedError, Repository } from 'typeorm';
-import { Model3d } from 'src/typeorm/entities/Model3d';
+import { Model3d } from 'src/typeorm/entities/model3d';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/typeorm/entities/User';
+import { User } from 'src/typeorm/entities/user';
 import { Model3dService } from '../services/model3d.service';
-import { FileMeta } from '../types/FileMeta';
-import { FileValidationPipe } from 'src/shared/pipes/FileValidationPipe';
-import { FileTypeValidator } from 'src/shared/validators/FileTypeValidator';
-import { UniqueTypeValidator } from 'src/shared/validators/UniqueTypeValidator';
-import { UploadModel3dFilesDto } from '../dto/uploadModel3dFilesDto';
-import { Public } from 'src/utils/skipAuth';
-import { PageParams } from '../dto/pageParams';
-import { SaveModel3dDto } from '../dto/saveModel3dDto';
+import { FileMeta } from '../types/file-meta';
+import { FileValidationPipe } from 'src/shared/pipes/file-validation-pipe';
+import { FileTypeValidator } from 'src/shared/validators/file-type-validator';
+import { UniqueTypeValidator } from 'src/shared/validators/unique-type-validator';
+import { UploadModel3dFilesDto } from '../dto/upload-model3d-files.dto';
+import { Public } from 'src/utils/skip-auth';
+import { PageParams } from '../dto/page-params';
+import { SaveModel3dDto } from '../dto/save-model3d.dto';
 
 @Controller('models')
-export class Models3dController {
+export class Model3dController {
   constructor(
     private readonly fs: FileStreamService,
     private readonly models3dService: Model3dService,
@@ -98,7 +98,7 @@ export class Models3dController {
 
       file.originalname = `${createdFile.id}.${ext}`;
 
-      const userDir = `/uploads/user-${userId}`;
+      const userDir = `../uploads/user-${userId}`;
 
       this.fs.createDirectory(userDir);
 
@@ -147,7 +147,7 @@ export class Models3dController {
     const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
 
     const fileName = `${fileMeta.id}.${fileMeta.ext}`;
-    const fileDir = `uploads/user-${userId}`;
+    const fileDir = `../uploads/user-${userId}`;
     // const fileExt = fileMeta.ext;
     // const model3dName = model3d.name;
 
