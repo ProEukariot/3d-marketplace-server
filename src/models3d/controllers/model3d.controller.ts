@@ -59,6 +59,8 @@ export class Model3dController {
       userId,
     );
 
+    this.models3dService.saveModel3d(insertedModel3d.id, userId);
+
     return { insertedId: insertedModel3d.id };
   }
 
@@ -121,6 +123,14 @@ export class Model3dController {
   async getModels3dPage(@Param() params: PageParams) {
     const models = await this.models3dService.getPage(params.page);
 
+    return models;
+  }
+
+  @Get('my/:page')
+  async getSavedModels3dPage(@Param() params: PageParams, @Req() req: Request) {
+    const userId = req['user'].sub;
+    const models = await this.models3dService.getSavedPage(userId, params.page);
+    
     return models;
   }
 
@@ -187,7 +197,7 @@ export class Model3dController {
     if (!fileMeta) return new NotFoundException('File not found');
 
     const fileName = `${fileMeta.id}.${fileMeta.ext}`;
-    const fileDir = `uploads/user-${userId}`;
+    const fileDir = `../uploads/user-${userId}`;
     const fileExt = fileMeta.ext;
     const model3dName = model3d.name;
 
@@ -205,7 +215,7 @@ export class Model3dController {
     const userId = req['user'].sub;
 
     try {
-      const insertedResult = await this.models3dService.saveUsersModel3d(
+      const insertedResult = await this.models3dService.saveModel3d(
         modelDto.id,
         userId,
       );

@@ -11,6 +11,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeormConfig from 'config/typeorm.config';
 import jwtConfig from 'config/jwt.config';
 import stripeConfig from 'config/stripe.config';
+import serverConfig from 'config/server.config';
 import { APP_GUARD } from '@nestjs/core';
 
 @Module({
@@ -27,7 +28,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [typeormConfig, jwtConfig, stripeConfig],
+      load: [typeormConfig, jwtConfig, stripeConfig, serverConfig],
     }),
   ],
   controllers: [AppController],

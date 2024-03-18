@@ -14,5 +14,6 @@ import { SavedModel } from 'src/typeorm/entities/saved-models';
   controllers: [Model3dController],
   providers: [Model3dService],
   imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User, File, SavedModel])],
+  exports: [Model3dService]
 })
 export class Models3dModule {}

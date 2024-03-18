@@ -79,15 +79,28 @@ export class Model3dService {
   //   return user;
   // }
 
-  async getPage(page: number) {
-    const pageSize = 4;
+  readonly PAGE_SIZE = 4;
 
+  async getPage(page: number) {
     const items = await this.model3dRepository.find({
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * this.PAGE_SIZE,
+      take: this.PAGE_SIZE,
     });
 
     return items;
+  }
+
+  async getSavedPage(userId: string, page: number) {
+    const items = await this.savedModelsRepository.find({
+      skip: (page - 1) * this.PAGE_SIZE,
+      take: this.PAGE_SIZE,
+      where: { userId },
+      relations: { model3d: true },
+    });
+
+    const rawItems = items.map((item) => item.model3d);
+
+    return rawItems;
   }
 
   async getModel3d(id: string) {
@@ -115,7 +128,7 @@ export class Model3dService {
     return files;
   }
 
-  async saveUsersModel3d(model3dId: string, userId: string) {
+  async saveModel3d(model3dId: string, userId: string) {
     try {
       return await this.savedModelsRepository.insert({ userId, model3dId });
     } catch (error) {
