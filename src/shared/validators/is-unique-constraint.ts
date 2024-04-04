@@ -29,6 +29,6 @@ export class IsUniqueConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage?(validationArguments?: ValidationArguments): string {
-    return `${validationArguments.value} is already taken`;
+    return `${validationArguments.value} is already taken!`;
   }
 }

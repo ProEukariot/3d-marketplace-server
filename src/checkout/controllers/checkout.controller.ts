@@ -26,21 +26,24 @@ export class CheckoutController {
     private readonly model3dService: Model3dService,
   ) {}
 
-  @Public()
+  //  checkout/create-session
   @Post('create-session')
   async createCheckoutSession(@Body('id') itemId: string, @Req() req: Request) {
+    console.log(req['user']);
     const userId: string = req['user'].sub;
 
     try {
-      const hostUrl = this.config.get<ServerConfig>('server').url;
+      const clientUrl = this.config.get<ServerConfig>('server').client_url;
 
       const item = await this.model3dService.getModel3d(itemId);
+
+      console.log('IDS HERE-->', itemId, userId);
 
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
-        success_url: `${hostUrl}/success.html`,
-        cancel_url: `${hostUrl}/cancel.html`,
+        success_url: `${clientUrl}/explore`,
+        cancel_url: `${clientUrl}/explore`,
         line_items: [
           {
             price_data: {
@@ -51,11 +54,15 @@ export class CheckoutController {
             quantity: 1,
           },
         ],
+        // client_reference_id
         metadata: {
           userId,
           itemId,
         },
       });
+
+      const success = await this.stripe.checkout.sessions.retrieve(session.id);
+      console.log('SUCC', success);
 
       return { url: session.url };
       return null;
@@ -64,43 +71,52 @@ export class CheckoutController {
     }
   }
 
+  //  checkout/webhook
   @Public()
   @Post('webhook')
   async webhook(
-    @Body() payload: any,
+    @Body() event: Stripe.Event,
     @Headers('stripe-signature') sig: string,
   ) {
-    let event: Stripe.Event;
+    // return;
+    // console.log('Payload', event);
+    // console.log('stripe-signature', sig);
 
-    try {
-      event = this.stripe.webhooks.constructEvent(
-        payload,
-        sig,
-        this.config.get<StripeConfig>('stripe').apiKey,
-      );
-    } catch (err) {
-      throw new BadRequestException(`Webhook Error: ${err.message}`);
-    }
+    // try {
+    //   event = this.stripe.webhooks.constructEvent(
+    //     payload,
+    //     sig,
+    //     this.config.get<StripeConfig>('stripe').apiKey,
+    //   );
+    // } catch (err) {
+    //   throw new BadRequestException(`Webhook Error: ${err.message}`);
+    // }
 
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        try {
-          const paymentIntentSucceeded = event.data.object;
+    return;
+    // try {
+    //   switch (event.type) {
+    //     case 'charge.succeeded':
+    //       const paymentIntentSucceeded = event.data.object;
 
-          const { userId, itemId }: { userId: string; itemId: string } =
-            paymentIntentSucceeded.metadata as any;
+    //       const { userId, itemId }: { userId: string; itemId: string } =
+    //         paymentIntentSucceeded.metadata as any;
 
-          const insertRes = await this.model3dService.saveModel3d(
-            itemId,
-            userId,
-          );
-        } catch (err) {
-          throw new InternalServerErrorException(err);
-        }
-        break;
+    //       console.log('META-->', paymentIntentSucceeded);
 
-      default:
-        throw new BadRequestException(`Unhandled event type ${event.type}`);
-    }
+    //       const insertRes = await this.model3dService.saveModel3d(
+    //         itemId,
+    //         userId,
+    //       );
+
+    //       break;
+    //     case 'payment_intent.succeeded':
+    //       break;
+
+    //     default:
+    //       throw new BadRequestException(`Unhandled event type ${event.type}`);
+    //   }
+    // } catch (err) {
+    //   throw new InternalServerErrorException(err);
+    // }
   }
 }

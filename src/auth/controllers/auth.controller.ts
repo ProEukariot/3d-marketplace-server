@@ -14,6 +14,7 @@ export class AuthController {
     private readonly hashService: HashService,
   ) {}
 
+  // auth/signup
   @Public()
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto) {
@@ -31,6 +32,7 @@ export class AuthController {
     return token;
   }
 
+  // auth/signin
   @Public()
   @Post('signin')
   async signIn(@Body() signInDto: SignInDto) {

@@ -29,7 +29,7 @@ export class SignUpDto {
 
   @IsNotEmpty()
   @IsString()
-  @IsEmail()
+  @IsEmail({}, { message: 'Email must be an email!' })
   @isUnique({ table: 'users', column: 'email' })
   email: string;
 }

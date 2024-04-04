@@ -13,8 +13,6 @@ import { Token } from 'src/shared/types/token';
 
 @Injectable()
 export class AuthService {
-  private logger = new Logger(AuthService.name);
-
   constructor(
     private readonly userService: UserService,
     private readonly hashService: HashService,
@@ -22,14 +20,9 @@ export class AuthService {
   ) {}
 
   async signIn(username: string, password: string) {
-    let user: User;
+    const user = await this.userService.getUserByUsername(username);
 
-    try {
-      user = await this.userService.getUserByUsername(username);
-    } catch (err) {
-      this.logger.error(err);
-      throw new BadRequestException(`User ${username} not found`);
-    }
+    if (!user) throw new UnauthorizedException(`User ${username} not found`);
 
     if (!(await this.hashService.compareHash(password, user.hash)))
       throw new UnauthorizedException(`Wrong password`);

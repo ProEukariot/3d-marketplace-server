@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Model3d } from 'src/typeorm/entities/model3d';
 import { User } from 'src/typeorm/entities/user';
@@ -23,13 +23,15 @@ export class Model3dService {
 
   async createModel3d(model3dBody: Model3dBody, userId: string) {
     try {
-      const user = await this.userRepository.findOneByOrFail({
+      const user = await this.userRepository.findOneBy({
         id: userId,
       });
 
+      if (!user) throw new BadRequestException();
+
       const model3d = new Model3d();
-      model3d.name = model3dBody.name;
-      model3d.price = model3dBody.amount;
+      model3d.name = model3dBody.title;
+      model3d.price = model3dBody.price;
       model3d.user = user;
 
       return await this.model3dRepository.save(model3d);
@@ -150,5 +152,16 @@ export class Model3dService {
     // savedModel.model3d = model3d;
     // savedModel.user = user;
     // return await this.savedModelsRepository.save(savedModel);
+  }
+
+  async userSavedModel3d(userId: string, model3dId: string) {
+    try {
+      const entitiesNum = await this.savedModelsRepository.count({
+        where: { userId, model3dId },
+      });
+      return !!entitiesNum;
+    } catch (error) {
+      throw error;
+    }
   }
 }

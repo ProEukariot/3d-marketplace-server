@@ -17,6 +17,6 @@ export class CompareToConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage(args: ValidationArguments) {
-    return `${args.property} differs from ${args.constraints[0]}`;
+    return `${args.property} differs from ${args.constraints[0]}!`;
   }
 }

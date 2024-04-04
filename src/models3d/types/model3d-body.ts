@@ -1,5 +1,5 @@
 export type Model3dBody = {
-  name: string;
+  title: string;
 
-  amount: number;
+  price: number;
 };

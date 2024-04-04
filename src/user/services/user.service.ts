@@ -21,13 +21,13 @@ export class UserService {
   }
 
   async getUserById(id: string) {
-    const user = await this.userRepository.findOneByOrFail({ id });
+    const user = await this.userRepository.findOneBy({ id });
 
     return user;
   }
 
   async getUserByUsername(username: string) {
-    const user = await this.userRepository.findOneByOrFail({ username });
+    const user = await this.userRepository.findOneBy({ username });
 
     return user;
   }

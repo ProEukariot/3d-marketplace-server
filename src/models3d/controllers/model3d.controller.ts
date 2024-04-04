@@ -23,7 +23,11 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { UploadModel3dDto } from '../dto/upload-model3d.dto';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
 import { FileStreamService } from 'src/shared/services/file-stream.service';
 import { QueryFailedError, Repository } from 'typeorm';
 import { Model3d } from 'src/typeorm/entities/model3d';
@@ -38,6 +42,7 @@ import { UploadModel3dFilesDto } from '../dto/upload-model3d-files.dto';
 import { Public } from 'src/utils/skip-auth';
 import { PageParams } from '../dto/page-params';
 import { SaveModel3dDto } from '../dto/save-model3d.dto';
+import { Add3dModelDto } from '../dto/add-3dmodel.dto';
 
 @Controller('models')
 export class Model3dController {
@@ -46,24 +51,59 @@ export class Model3dController {
     private readonly models3dService: Model3dService,
   ) {}
 
-  @Public()
-  @Get('list')
-  getModels3d() {}
+  @Post('add')
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'materials' }, { name: 'models' }]),
+  )
+  async add3dModel(
+    @Body() modelDto: Add3dModelDto,
+    @Req() req: Request,
+    @UploadedFiles()
+    files: {
+      materials: Express.Multer.File[];
+      models: Express.Multer.File[];
+    },
+  ) {
+    console.log(JSON.stringify(modelDto));
 
-  @Post('upload')
-  async createModel3d(@Body() modelDto: UploadModel3dDto, @Req() req: Request) {
     const userId = req['user'].sub;
 
-    const insertedModel3d = await this.models3dService.createModel3d(
-      modelDto,
-      userId,
-    );
+    // console.log(files);
 
-    this.models3dService.saveModel3d(insertedModel3d.id, userId);
+    // const insertedModel3d = await this.models3dService.createModel3d(
+    //   modelDto,
+    //   userId,
+    // );
 
-    return { insertedId: insertedModel3d.id };
+    // this.models3dService.saveModel3d(insertedModel3d.id, userId);
+
+    // return { insertedId: insertedModel3d.id };
   }
 
+  // models/upload
+  // @Post('upload')
+  // async createModel3d(@Body() modelDto: UploadModel3dDto, @Req() req: Request) {
+  //   const userId = req['user'].sub;
+
+  //   const insertedModel3d = await this.models3dService.createModel3d(
+  //     modelDto,
+  //     userId,
+  //   );
+
+  //   this.models3dService.saveModel3d(insertedModel3d.id, userId);
+
+  //   return { insertedId: insertedModel3d.id };
+  // }
+
+  // models/:id/details
+  @Public()
+  @Get(':id/details')
+  async getModel3d(@Param('id', new ParseUUIDPipe()) id: string) {
+    const model = await this.models3dService.getModel3d(id);
+    return model;
+  }
+
+  //  models/upload/files
   @Post('upload/files')
   @UseInterceptors(FilesInterceptor('files'))
   async uplodModel3dFiles(
@@ -118,6 +158,7 @@ export class Model3dController {
     return { insertedIds: ids };
   }
 
+  //  models/:page
   @Public()
   @Get(':page')
   async getModels3dPage(@Param() params: PageParams) {
@@ -126,11 +167,12 @@ export class Model3dController {
     return models;
   }
 
+  //  models/my/:page
   @Get('my/:page')
   async getSavedModels3dPage(@Param() params: PageParams, @Req() req: Request) {
     const userId = req['user'].sub;
     const models = await this.models3dService.getSavedPage(userId, params.page);
-    
+
     return models;
   }
 
@@ -142,6 +184,7 @@ export class Model3dController {
   //   return model;
   // }
 
+  //  models/preview/:id/file
   @Public()
   @Get('preview/:id/file')
   async getModel3dFile(
@@ -158,18 +201,16 @@ export class Model3dController {
 
     const fileName = `${fileMeta.id}.${fileMeta.ext}`;
     const fileDir = `../uploads/user-${userId}`;
-    // const fileExt = fileMeta.ext;
-    // const model3dName = model3d.name;
 
     const file = this.fs.getReadStream(fileName, fileDir);
     res.set({
       'Content-Type': 'application/octet-stream',
-      // 'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
     });
 
     return new StreamableFile(file);
   }
 
+  //  models/:id/files
   @Public()
   @Get(':id/files')
   async getFilesMetaForModel3d(@Param('id', new ParseUUIDPipe()) id: string) {
@@ -180,24 +221,42 @@ export class Model3dController {
     return filesMeta;
   }
 
-  @Public()
+  //  models/download/:id/file-meta/:ext
+  @Get('download/:id/file-meta/:ext')
+  async downloadModel3dMeta(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('ext') ext: string,
+  ) {
+    const file = await this.models3dService.getFileByModel3d(id, ext);
+
+    return file;
+  }
+
+  //  models/download/:id/file/:ext
   @Get('download/:id/file/:ext')
   async downloadModel3dFile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('ext') ext: string,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
+    const userId = req['user'].sub;
+
+    const hasEntry = await this.models3dService.userSavedModel3d(userId, id);
+
+    if (!hasEntry) throw new BadRequestException('The model is not saved!');
+
     const model3d = await this.models3dService.getModel3d(id);
     if (!model3d) return new NotFoundException('File not found');
 
-    const user = model3d.user;
-    const userId = user.id;
+    const creator = model3d.user;
+    const creatorId = creator.id;
 
     const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
     if (!fileMeta) return new NotFoundException('File not found');
 
     const fileName = `${fileMeta.id}.${fileMeta.ext}`;
-    const fileDir = `../uploads/user-${userId}`;
+    const fileDir = `../uploads/user-${creatorId}`;
     const fileExt = fileMeta.ext;
     const model3dName = model3d.name;
 
@@ -210,6 +269,7 @@ export class Model3dController {
     return new StreamableFile(file);
   }
 
+  //  models/save
   @Post('save')
   async saveModel3d(@Body() modelDto: SaveModel3dDto, @Req() req: Request) {
     const userId = req['user'].sub;
