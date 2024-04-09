@@ -10,6 +10,14 @@ export class UserService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
+  async getUser(id: string) {
+    return await this.userRepository.findOneBy({ id });
+  }
+
+  async getUserByUsername(username: string) {
+    return await this.userRepository.findOneBy({ username });
+  }
+
   async createUser(createUserParams: CreateUserParams) {
     const newUser = this.userRepository.create({
       username: createUserParams.username,
@@ -18,17 +26,5 @@ export class UserService {
     });
 
     return await this.userRepository.save(newUser);
-  }
-
-  async getUserById(id: string) {
-    const user = await this.userRepository.findOneBy({ id });
-
-    return user;
-  }
-
-  async getUserByUsername(username: string) {
-    const user = await this.userRepository.findOneBy({ username });
-
-    return user;
   }
 }

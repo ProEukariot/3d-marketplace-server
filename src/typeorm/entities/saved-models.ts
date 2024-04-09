@@ -10,7 +10,7 @@ import { Model3d } from './model3d';
 import { User } from './user';
 
 @Entity('savedModels')
-export class SavedModel {
+export class Subscribed3dModels {
   @PrimaryColumn()
   userId: string;
 

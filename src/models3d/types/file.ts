@@ -1,7 +1,7 @@
-export type FileMeta = {
+export type File = {
   size: number;
 
-  ext: string;
+  name: string;
 
   // mimetype: string;
 

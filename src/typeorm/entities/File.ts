@@ -10,7 +10,10 @@ export class File {
   size: number;
 
   @Column()
-  ext: string;
+  name: string;
+
+  @Column()
+  target: string;
 
   @ManyToOne(() => Model3d, (model3d) => model3d.files)
   model3d: Model3d;

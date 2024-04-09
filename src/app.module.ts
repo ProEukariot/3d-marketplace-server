@@ -8,11 +8,12 @@ import { UserModule } from './user/user.module';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { CheckoutModule } from './checkout/checkout.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import typeormConfig from 'config/typeorm.config';
 import jwtConfig from 'config/jwt.config';
 import stripeConfig from 'config/stripe.config';
 import serverConfig from 'config/server.config';
-import { APP_GUARD } from '@nestjs/core';
+import azureConfig from 'config/azure.config';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [typeormConfig, jwtConfig, stripeConfig, serverConfig],
+      load: [typeormConfig, jwtConfig, stripeConfig, serverConfig, azureConfig],
     }),
   ],
   controllers: [AppController],

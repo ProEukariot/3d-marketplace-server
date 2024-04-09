@@ -8,12 +8,12 @@ import { User } from 'src/typeorm/entities/user';
 import { Model3d } from 'src/typeorm/entities/model3d';
 import { Model3dService } from './services/model3d.service';
 import { File } from 'src/typeorm/entities/file';
-import { SavedModel } from 'src/typeorm/entities/saved-models';
+import { Subscribed3dModels } from 'src/typeorm/entities/saved-models';
 
 @Module({
   controllers: [Model3dController],
   providers: [Model3dService],
-  imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User, File, SavedModel])],
+  imports: [AppServicesModule, TypeOrmModule.forFeature([Model3d, User, File, Subscribed3dModels])],
   exports: [Model3dService]
 })
 export class Models3dModule {}

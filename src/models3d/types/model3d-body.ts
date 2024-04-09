@@ -1,4 +1,4 @@
-export type Model3dBody = {
+export type Model3d = {
   title: string;
 
   price: number;

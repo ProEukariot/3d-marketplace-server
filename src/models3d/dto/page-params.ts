@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsAlpha,
   IsInt,
@@ -9,8 +9,11 @@ import {
 } from 'class-validator';
 
 export class PageParams {
-  @Transform(({ value }) => parseInt(value))
+  cursor?: string;
+
+  // @Transform(({ value }) => parseInt(value))
   @IsPositive()
   @IsInt()
-  page: number;
+  @Type(() => Number)
+  limit: number;
 }

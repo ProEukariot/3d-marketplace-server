@@ -16,7 +16,7 @@ import Stripe from 'stripe';
 import { STRIPE_CLIENT } from '../constants';
 import { ServerConfig } from 'interfaces/server-config.interface';
 import { Model3dService } from 'src/models3d/services/model3d.service';
-import { StripeConfig } from 'interfaces/stripe-config.innterface';
+import { StripeConfig } from 'interfaces/stripe-config.interface';
 
 @Controller('checkout')
 export class CheckoutController {
@@ -35,7 +35,7 @@ export class CheckoutController {
     try {
       const clientUrl = this.config.get<ServerConfig>('server').client_url;
 
-      const item = await this.model3dService.getModel3d(itemId);
+      const item = await this.model3dService.get3dModel(itemId);
 
       console.log('IDS HERE-->', itemId, userId);
 

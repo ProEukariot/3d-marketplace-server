@@ -28,12 +28,14 @@ export class AuthService {
       throw new UnauthorizedException(`Wrong password`);
 
     const payload = {
-      sub: user.id,
+      id: user.id,
       username: user.username,
       email: user.email,
     };
 
-    const token: Token = { value: await this.jwtService.signAsync(payload) };
+    const token: Token = {
+      value: await this.jwtService.signAsync({ user: payload }),
+    };
 
     return token;
   }

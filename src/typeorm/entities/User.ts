@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Model3d } from './model3d';
-import { SavedModel } from './saved-models';
+import { Subscribed3dModels } from './saved-models';
 
 @Entity('users')
 export class User {
@@ -34,6 +34,6 @@ export class User {
   // @JoinTable({name: "saved_models"})
   // savedModels: Model3d[];
 
-  @OneToMany(() => SavedModel, (savedModel)=>savedModel.user)
-  savedModels: SavedModel[];
+  @OneToMany(() => Subscribed3dModels, (savedModel)=>savedModel.user)
+  savedModels: Subscribed3dModels[];
 }

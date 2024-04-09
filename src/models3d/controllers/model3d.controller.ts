@@ -30,11 +30,12 @@ import {
 } from '@nestjs/platform-express';
 import { FileStreamService } from 'src/shared/services/file-stream.service';
 import { QueryFailedError, Repository } from 'typeorm';
-import { Model3d } from 'src/typeorm/entities/model3d';
+import { Model3d as Model3dEntity } from 'src/typeorm/entities/model3d';
+import { File as FileEntity } from 'src/typeorm/entities/file';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/typeorm/entities/user';
+import { User as UserEntity } from 'src/typeorm/entities/user';
 import { Model3dService } from '../services/model3d.service';
-import { FileMeta } from '../types/file-meta';
+import { File } from '../types/file';
 import { FileValidationPipe } from 'src/shared/pipes/file-validation-pipe';
 import { FileTypeValidator } from 'src/shared/validators/file-type-validator';
 import { UniqueTypeValidator } from 'src/shared/validators/unique-type-validator';
@@ -43,30 +44,93 @@ import { Public } from 'src/utils/skip-auth';
 import { PageParams } from '../dto/page-params';
 import { SaveModel3dDto } from '../dto/save-model3d.dto';
 import { Add3dModelDto } from '../dto/add-3dmodel.dto';
+import { BlobServiceClient } from '@azure/storage-blob';
+import { ConfigService } from '@nestjs/config';
+import { AzureConfig } from 'interfaces/azure-config.interface';
+import { User } from 'src/shared/decorators/get-user.decorator';
 
 @Controller('models')
 export class Model3dController {
   constructor(
     private readonly fs: FileStreamService,
     private readonly models3dService: Model3dService,
+    private readonly configService: ConfigService,
   ) {}
 
+  // models/add
   @Post('add')
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'materials' }, { name: 'models' }]),
   )
   async add3dModel(
+    @User() user: UserEntity,
     @Body() modelDto: Add3dModelDto,
-    @Req() req: Request,
     @UploadedFiles()
     files: {
       materials: Express.Multer.File[];
       models: Express.Multer.File[];
     },
   ) {
-    console.log(JSON.stringify(modelDto));
+    try {
+      const model3d = new Model3dEntity();
+      model3d.name = modelDto.title;
+      model3d.price = modelDto.price;
+      model3d.user = user;
 
-    const userId = req['user'].sub;
+      const inserted3dModel = await this.models3dService.create3dModel(model3d);
+
+      await this.models3dService.subscribe3dModelToUser(inserted3dModel, user);
+
+      const insertedFiles = await Promise.all(
+        Object.keys(files).map(async (key) => {
+          return Promise.all(
+            (files[key] as Express.Multer.File[]).map(async (file) => {
+              const fileRecord = new FileEntity();
+              fileRecord.size = file.size;
+              fileRecord.name = file.originalname;
+
+              fileRecord.target = key;
+              fileRecord.model3d = inserted3dModel;
+
+              return await this.models3dService.createFile(fileRecord);
+            }),
+          );
+        }),
+      );
+
+      return { model: inserted3dModel, files: insertedFiles };
+    } catch (err) {
+      console.error(err);
+    }
+
+    try {
+      // const AZURE_STORAGE_CONNECTION_STRING =
+      //   this.configService.get<AzureConfig>('azure').connectionString;
+      // console.log('Azure Conn str:', AZURE_STORAGE_CONNECTION_STRING);
+      // const blobServiceClient = BlobServiceClient.fromConnectionString(
+      //   AZURE_STORAGE_CONNECTION_STRING,
+      // );
+      // const blob = files.materials[0];
+      // const blobName = blob.originalname;
+      // const containerClient =
+      //   blobServiceClient.getContainerClient('test-container');
+      // const createContainerResponse = await containerClient.createIfNotExists();
+      // console.log('Container created: ', createContainerResponse);
+      // const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      // console.log('blockBlobClient', blockBlobClient);
+      // console.log(
+      //   `\nUploading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`,
+      // );
+      // const uploadBlobResponse = await blockBlobClient.uploadData(blob.buffer);4
+      /////////////////////------>>>>.>
+      // const uploadBlobResponse = await blockBlobClient.upload(
+      //   blob.buffer,
+      //   blob.buffer.length,
+      // );
+      // console.log('Upload RESPONSE', uploadBlobResponse);
+    } catch (err) {
+      console.error(err);
+    }
 
     // console.log(files);
 
@@ -95,86 +159,31 @@ export class Model3dController {
   //   return { insertedId: insertedModel3d.id };
   // }
 
-  // models/:id/details
+  // models/:id
   @Public()
-  @Get(':id/details')
-  async getModel3d(@Param('id', new ParseUUIDPipe()) id: string) {
-    const model = await this.models3dService.getModel3d(id);
-    return model;
+  @Get(':id')
+  async get3dModel(@Param('id', new ParseUUIDPipe()) id: string) {
+    return await this.models3dService.get3dModel(id);
   }
 
-  //  models/upload/files
-  @Post('upload/files')
-  @UseInterceptors(FilesInterceptor('files'))
-  async uplodModel3dFiles(
-    @UploadedFiles(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 10_000_000 }),
-          // new FileTypeValidator({ fileType: 'pdf,txt' }),
-        ],
-      }),
-      new FileValidationPipe({
-        validators: [
-          new FileTypeValidator({ types: ['glb'] }),
-          new UniqueTypeValidator(),
-        ],
-      }),
-    )
-    files: Array<Express.Multer.File>,
-    @Body() modelFilesDto: UploadModel3dFilesDto,
-    @Req() req: Request,
-  ) {
-    const userId = req['user'].sub;
-
-    const tasks = files.map(async (file) => {
-      const ext = file.originalname.split('.').pop();
-      const size = file.size;
-
-      const fileMeta: FileMeta = { size, ext };
-
-      const createdFile = await this.models3dService.createFile(
-        fileMeta,
-        modelFilesDto.model3dId,
-      );
-
-      file.originalname = `${createdFile.id}.${ext}`;
-
-      const userDir = `../uploads/user-${userId}`;
-
-      this.fs.createDirectory(userDir);
-
-      const ws = this.fs.getWriteStream(file.originalname, userDir);
-      ws.write(file.buffer);
-      ws.end();
-
-      return createdFile;
-    });
-
-    const insertedFiles = await Promise.all(tasks);
-
-    const ids = insertedFiles.map((file) => file.id);
-
-    return { insertedIds: ids };
-  }
-
-  //  models/:page
+  // models
   @Public()
-  @Get(':page')
-  async getModels3dPage(@Param() params: PageParams) {
-    const models = await this.models3dService.getPage(params.page);
-
-    return models;
+  @Get()
+  async get3dModels(@Query() params: PageParams) {
+    return await this.models3dService.get3dModels(
+      params.cursor,
+      params.limit,
+    );
   }
 
   //  models/my/:page
-  @Get('my/:page')
-  async getSavedModels3dPage(@Param() params: PageParams, @Req() req: Request) {
-    const userId = req['user'].sub;
-    const models = await this.models3dService.getSavedPage(userId, params.page);
+  // @Get('my/:page')
+  // async getSavedModels3dPage(@Param() params: PageParams, @Req() req: Request) {
+  //   const userId = req['user'].sub;
+  //   const models = await this.models3dService.getSavedPage(userId, params.page);
 
-    return models;
-  }
+  //   return models;
+  // }
 
   // @Public()
   // @Get(':id/file')
@@ -192,14 +201,14 @@ export class Model3dController {
     @Res({ passthrough: true }) res: Response,
     @Query('ext') ext: string,
   ) {
-    const model3d = await this.models3dService.getModel3d(id);
+    const model3d = await this.models3dService.get3dModel(id);
 
     const user = model3d.user;
     const userId = user.id;
 
     const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
 
-    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
+    const fileName = `${fileMeta.id}.${fileMeta.name}`;
     const fileDir = `../uploads/user-${userId}`;
 
     const file = this.fs.getReadStream(fileName, fileDir);
@@ -246,7 +255,7 @@ export class Model3dController {
 
     if (!hasEntry) throw new BadRequestException('The model is not saved!');
 
-    const model3d = await this.models3dService.getModel3d(id);
+    const model3d = await this.models3dService.get3dModel(id);
     if (!model3d) return new NotFoundException('File not found');
 
     const creator = model3d.user;
@@ -255,9 +264,9 @@ export class Model3dController {
     const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
     if (!fileMeta) return new NotFoundException('File not found');
 
-    const fileName = `${fileMeta.id}.${fileMeta.ext}`;
+    const fileName = `${fileMeta.id}.${fileMeta.name}`;
     const fileDir = `../uploads/user-${creatorId}`;
-    const fileExt = fileMeta.ext;
+    const fileExt = fileMeta.name;
     const model3dName = model3d.name;
 
     const file = this.fs.getReadStream(fileName, fileDir);
@@ -271,16 +280,17 @@ export class Model3dController {
 
   //  models/save
   @Post('save')
-  async saveModel3d(@Body() modelDto: SaveModel3dDto, @Req() req: Request) {
-    const userId = req['user'].sub;
+  async saveModel3d(
+    @User() user: UserEntity,
+    @Body() modelDto: SaveModel3dDto,
+  ) {
+    modelDto.id;
+
+    const model3d = new Model3dEntity();
+    model3d.id = modelDto.id;
 
     try {
-      const insertedResult = await this.models3dService.saveModel3d(
-        modelDto.id,
-        userId,
-      );
-
-      return insertedResult;
+      return await this.models3dService.subscribe3dModelToUser(model3d, user);
     } catch (error) {
       if (error.number == 2627) {
         return new BadRequestException(

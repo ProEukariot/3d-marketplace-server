@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { User } from './user';
 import { File } from './file';
-import { SavedModel } from './saved-models';
+import { Subscribed3dModels } from './saved-models';
 
 @Entity('models')
 export class Model3d {
@@ -30,8 +30,8 @@ export class Model3d {
   @OneToMany(() => File, (file) => file.model3d)
   files: File[];
 
-  @OneToMany(() => SavedModel, (savedModel)=>savedModel.model3d)
-  savedModels: SavedModel[];
+  @OneToMany(() => Subscribed3dModels, (savedModel)=>savedModel.model3d)
+  savedModels: Subscribed3dModels[];
 
   // @ManyToOne(() => Model3DCategory)
   // category: Model3DCategory;
