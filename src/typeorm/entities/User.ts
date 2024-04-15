@@ -8,7 +8,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Model3d } from './model3d';
-import { Subscribed3dModels } from './saved-models';
+import { Subscribed3dModels } from './subscribed-models3d';
+import { Exclude } from 'class-transformer';
 
 @Entity('users')
 export class User {
@@ -18,6 +19,7 @@ export class User {
   @Column({ unique: true, nullable: false })
   username: string;
 
+  @Exclude()
   @Column({ nullable: false })
   hash: string;
 
@@ -34,6 +36,6 @@ export class User {
   // @JoinTable({name: "saved_models"})
   // savedModels: Model3d[];
 
-  @OneToMany(() => Subscribed3dModels, (savedModel)=>savedModel.user)
+  @OneToMany(() => Subscribed3dModels, (savedModel) => savedModel.user)
   savedModels: Subscribed3dModels[];
 }

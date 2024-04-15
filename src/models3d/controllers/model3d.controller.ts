@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ClassSerializerInterceptor,
   Controller,
   // FileTypeValidator,
   Get,
@@ -159,146 +160,112 @@ export class Model3dController {
   //   return { insertedId: insertedModel3d.id };
   // }
 
-  // models/:id
-  @Public()
-  @Get(':id')
-  async get3dModel(@Param('id', new ParseUUIDPipe()) id: string) {
-    return await this.models3dService.get3dModel(id);
-  }
-
   // models
   @Public()
+  @UseInterceptors(ClassSerializerInterceptor)
   @Get()
   async get3dModels(@Query() params: PageParams) {
-    return await this.models3dService.get3dModels(
-      params.cursor,
-      params.limit,
-    );
+    try {
+      return await this.models3dService.get3dModels(
+        params.limit,
+        params.cursor,
+      );
+    } catch (error) {
+      throw error;
+    }
   }
 
-  //  models/my/:page
-  // @Get('my/:page')
-  // async getSavedModels3dPage(@Param() params: PageParams, @Req() req: Request) {
-  //   const userId = req['user'].sub;
-  //   const models = await this.models3dService.getSavedPage(userId, params.page);
-
-  //   return models;
-  // }
-
-  // @Public()
-  // @Get(':id/file')
-  // async getFilebyModel3dId(@Param('id') id, @Query('ext') ext: string) {
-  //   const model = await this.models3dService.getFilebyModel3dId(id, ext);
-
-  //   return model;
-  // }
-
-  //  models/preview/:id/file
-  @Public()
-  @Get('preview/:id/file')
-  async getModel3dFile(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Res({ passthrough: true }) res: Response,
-    @Query('ext') ext: string,
+  // models/subscribed-models
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get('subscribed-models')
+  async getSubscribed3dModels(
+    @User() user: UserEntity,
+    @Query() params: PageParams,
   ) {
-    const model3d = await this.models3dService.get3dModel(id);
-
-    const user = model3d.user;
-    const userId = user.id;
-
-    const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
-
-    const fileName = `${fileMeta.id}.${fileMeta.name}`;
-    const fileDir = `../uploads/user-${userId}`;
-
-    const file = this.fs.getReadStream(fileName, fileDir);
-    res.set({
-      'Content-Type': 'application/octet-stream',
-    });
-
-    return new StreamableFile(file);
+    try {
+      return await this.models3dService.getSubscribed3dModels(
+        user,
+        params.limit,
+        params.cursor,
+      );
+    } catch (error) {
+      throw error;
+    }
   }
 
-  //  models/:id/files
+  // models/:id
   @Public()
-  @Get(':id/files')
-  async getFilesMetaForModel3d(@Param('id', new ParseUUIDPipe()) id: string) {
-    const filesMeta = await this.models3dService.getFilesByModel3d(id);
-
-    console.log(filesMeta);
-
-    return filesMeta;
-  }
-
-  //  models/download/:id/file-meta/:ext
-  @Get('download/:id/file-meta/:ext')
-  async downloadModel3dMeta(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('ext') ext: string,
-  ) {
-    const file = await this.models3dService.getFileByModel3d(id, ext);
-
-    return file;
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get(':id')
+  async get3dModel(@Param('id', new ParseUUIDPipe()) id: string) {
+    try {
+      return await this.models3dService.get3dModel(id, {
+        user: true,
+        files: true,
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 
   //  models/download/:id/file/:ext
-  @Get('download/:id/file/:ext')
-  async downloadModel3dFile(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('ext') ext: string,
-    @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
-  ) {
-    const userId = req['user'].sub;
+  // @Get('download/:id/file/:ext')
+  // async downloadModel3dFile(
+  //   @Param('id', new ParseUUIDPipe()) id: string,
+  //   @Param('ext') ext: string,
+  //   @Res({ passthrough: true }) res: Response,
+  //   @Req() req: Request,
+  // ) {
+  //   const userId = req['user'].sub;
 
-    const hasEntry = await this.models3dService.userSavedModel3d(userId, id);
+  //   const hasEntry = await this.models3dService.userSavedModel3d(userId, id);
 
-    if (!hasEntry) throw new BadRequestException('The model is not saved!');
+  //   if (!hasEntry) throw new BadRequestException('The model is not saved!');
 
-    const model3d = await this.models3dService.get3dModel(id);
-    if (!model3d) return new NotFoundException('File not found');
+  //   const model3d = await this.models3dService.get3dModel(id);
+  //   if (!model3d) return new NotFoundException('File not found');
 
-    const creator = model3d.user;
-    const creatorId = creator.id;
+  //   const creator = model3d.user;
+  //   const creatorId = creator.id;
 
-    const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
-    if (!fileMeta) return new NotFoundException('File not found');
+  //   const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
+  //   if (!fileMeta) return new NotFoundException('File not found');
 
-    const fileName = `${fileMeta.id}.${fileMeta.name}`;
-    const fileDir = `../uploads/user-${creatorId}`;
-    const fileExt = fileMeta.name;
-    const model3dName = model3d.name;
+  //   const fileName = `${fileMeta.id}.${fileMeta.name}`;
+  //   const fileDir = `../uploads/user-${creatorId}`;
+  //   const fileExt = fileMeta.name;
+  //   const model3dName = model3d.name;
 
-    const file = this.fs.getReadStream(fileName, fileDir);
-    res.set({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
-    });
+  //   const file = this.fs.getReadStream(fileName, fileDir);
+  //   res.set({
+  //     'Content-Type': 'application/octet-stream',
+  //     'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
+  //   });
 
-    return new StreamableFile(file);
-  }
+  //   return new StreamableFile(file);
+  // }
 
   //  models/save
-  @Post('save')
-  async saveModel3d(
-    @User() user: UserEntity,
-    @Body() modelDto: SaveModel3dDto,
-  ) {
-    modelDto.id;
+  // @Post('save')
+  // async saveModel3d(
+  //   @User() user: UserEntity,
+  //   @Body() modelDto: SaveModel3dDto,
+  // ) {
+  //   modelDto.id;
 
-    const model3d = new Model3dEntity();
-    model3d.id = modelDto.id;
+  //   const model3d = new Model3dEntity();
+  //   model3d.id = modelDto.id;
 
-    try {
-      return await this.models3dService.subscribe3dModelToUser(model3d, user);
-    } catch (error) {
-      if (error.number == 2627) {
-        return new BadRequestException(
-          'The 3D model is already saved for that user',
-        );
-      }
+  //   try {
+  //     return await this.models3dService.subscribe3dModelToUser(model3d, user);
+  //   } catch (error) {
+  //     if (error.number == 2627) {
+  //       return new BadRequestException(
+  //         'The 3D model is already saved for that user',
+  //       );
+  //     }
 
-      return new InternalServerErrorException('An unexpected error occurred');
-    }
-  }
+  //     return new InternalServerErrorException('An unexpected error occurred');
+  //   }
+  // }
 }

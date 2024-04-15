@@ -2,7 +2,7 @@ import { registerAs } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Model3d } from 'src/typeorm/entities/model3d';
 import { File } from 'src/typeorm/entities/file';
-import { Subscribed3dModels } from 'src/typeorm/entities/saved-models';
+import { Subscribed3dModels } from 'src/typeorm/entities/subscribed-models3d';
 import { User } from 'src/typeorm/entities/user';
 
 export default registerAs(

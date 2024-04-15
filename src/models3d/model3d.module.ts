@@ -8,7 +8,7 @@ import { User } from 'src/typeorm/entities/user';
 import { Model3d } from 'src/typeorm/entities/model3d';
 import { Model3dService } from './services/model3d.service';
 import { File } from 'src/typeorm/entities/file';
-import { Subscribed3dModels } from 'src/typeorm/entities/saved-models';
+import { Subscribed3dModels } from 'src/typeorm/entities/subscribed-models3d';
 
 @Module({
   controllers: [Model3dController],
