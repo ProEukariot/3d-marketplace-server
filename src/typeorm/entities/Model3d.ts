@@ -9,6 +9,7 @@ import {
 import { User } from './user';
 import { File } from './file';
 import { Subscribed3dModels } from './subscribed-models3d';
+import { Exclude } from 'class-transformer';
 
 @Entity('models')
 export class Model3d {

@@ -15,6 +15,9 @@ export class File {
   @Column()
   target: string;
 
+  @Column({ default: 'private' })
+  access: 'private' | 'public';
+
   @ManyToOne(() => Model3d, (model3d) => model3d.files)
   model3d: Model3d;
 }

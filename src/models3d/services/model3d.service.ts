@@ -19,7 +19,7 @@ export class Model3dService {
     @InjectRepository(FileEntity)
     private readonly filesRepository: Repository<FileEntity>,
     @InjectRepository(Subscribed3dModels)
-    private readonly subscribed3dModelsRepository: Repository<Subscribed3dModels>,
+    private readonly subscriptionRepository: Repository<Subscribed3dModels>,
   ) {}
 
   async get3dModel(id: string, extras?: { user?: boolean; files?: boolean }) {
@@ -49,6 +49,16 @@ export class Model3dService {
     }
   }
 
+  async getSubscription(user: UserEntity, model3d: Model3dEntity) {
+    try {
+      return await this.subscriptionRepository.findOne({
+        where: { user, model3d },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getSubscribed3dModels(
     user: UserEntity,
     limit: number,
@@ -56,7 +66,7 @@ export class Model3dService {
   ) {
     try {
       const queryBuilder =
-        this.subscribed3dModelsRepository.createQueryBuilder('subscribedModel');
+        this.subscriptionRepository.createQueryBuilder('subscribedModel');
 
       queryBuilder
         .leftJoinAndSelect(
@@ -110,7 +120,7 @@ export class Model3dService {
 
   async subscribe3dModelToUser(model3d: Model3dEntity, user: UserEntity) {
     try {
-      return await this.subscribed3dModelsRepository.insert({ user, model3d });
+      return await this.subscriptionRepository.insert({ user, model3d });
     } catch (error) {
       throw error;
     }

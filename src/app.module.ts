@@ -9,6 +9,7 @@ import { AuthGuard } from './shared/guards/auth.guard';
 import { CheckoutModule } from './checkout/checkout.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { AzureStorageModule } from './azure/azure.module';
 import typeormConfig from 'config/typeorm.config';
 import jwtConfig from 'config/jwt.config';
 import stripeConfig from 'config/stripe.config';
@@ -31,6 +32,7 @@ import azureConfig from 'config/azure.config';
       isGlobal: true,
       load: [typeormConfig, jwtConfig, stripeConfig, serverConfig, azureConfig],
     }),
+    AzureStorageModule,
   ],
   controllers: [AppController],
   providers: [

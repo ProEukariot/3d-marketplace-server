@@ -49,6 +49,8 @@ import { BlobServiceClient } from '@azure/storage-blob';
 import { ConfigService } from '@nestjs/config';
 import { AzureConfig } from 'interfaces/azure-config.interface';
 import { User } from 'src/shared/decorators/get-user.decorator';
+import { v4 as uuidv4 } from 'uuid';
+import { BlobStorageService } from 'src/azure/services/azure.service';
 
 @Controller('models')
 export class Model3dController {
@@ -56,7 +58,54 @@ export class Model3dController {
     private readonly fs: FileStreamService,
     private readonly models3dService: Model3dService,
     private readonly configService: ConfigService,
+    private readonly blobService: BlobStorageService,
   ) {}
+
+  private async insertFile(
+    file: Express.Multer.File,
+    related3dModelEntity: Model3dEntity,
+    targetDirectory: string,
+    access: 'public' | 'private' = 'private',
+  ) {
+    try {
+      const fileEntity = new FileEntity();
+      fileEntity.size = file.size;
+      fileEntity.name = file.originalname;
+
+      fileEntity.access = access;
+      fileEntity.target = targetDirectory;
+      fileEntity.model3d = related3dModelEntity;
+
+      const insertedFile = await this.models3dService.createFile(fileEntity);
+      return insertedFile;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  private async uploadBlob(
+    fileEntity: FileEntity,
+    user: UserEntity,
+    blob: Express.Multer.File,
+  ) {
+    try {
+      const containerName = `usr-${user.id}`.toLowerCase();
+
+      // fileEntity must be with model3dEntity relation
+      const blobName =
+        `${fileEntity.model3d.id}/${fileEntity.access}/${fileEntity.target}/blob-${fileEntity.id}`.toLowerCase();
+
+      const uploadRes = await this.blobService.uploadBlob(
+        containerName,
+        blobName,
+        blob,
+      );
+
+      return uploadRes;
+    } catch (err) {
+      throw err;
+    }
+  }
 
   // models/add
   @Post('add')
@@ -82,83 +131,57 @@ export class Model3dController {
 
       await this.models3dService.subscribe3dModelToUser(inserted3dModel, user);
 
-      const insertedFiles = await Promise.all(
-        Object.keys(files).map(async (key) => {
-          return Promise.all(
-            (files[key] as Express.Multer.File[]).map(async (file) => {
-              const fileRecord = new FileEntity();
-              fileRecord.size = file.size;
-              fileRecord.name = file.originalname;
+      // save preview file (modify file data here)
 
-              fileRecord.target = key;
-              fileRecord.model3d = inserted3dModel;
+      const savePreviewFiles = async () => {
+        const fileToSave = files.models[0];
+        const insertedFile = await this.insertFile(
+          fileToSave,
+          inserted3dModel,
+          'models',
+          'public',
+        );
+        const uploadBlobResponse = await this.uploadBlob(
+          insertedFile,
+          user,
+          fileToSave,
+        );
 
-              return await this.models3dService.createFile(fileRecord);
-            }),
-          );
-        }),
-      );
+        return { insertedFile, uploadBlobResponse };
+      };
 
-      return { model: inserted3dModel, files: insertedFiles };
+      // save source files
+      const saveSourceFiles = async () => {
+        return Promise.all(
+          Object.keys(files).map(async (key) => {
+            return Promise.all(
+              (files[key] as Express.Multer.File[]).map(async (file) => {
+                const insertedFile = await this.insertFile(
+                  file,
+                  inserted3dModel,
+                  key,
+                );
+
+                const uploadBlobResponse = await this.uploadBlob(
+                  insertedFile,
+                  user,
+                  file,
+                );
+
+                return { insertedFile, uploadBlobResponse };
+              }),
+            );
+          }),
+        );
+      };
+
+      const res = await Promise.all([savePreviewFiles(), saveSourceFiles()]);
+
+      return { model: inserted3dModel };
     } catch (err) {
       console.error(err);
     }
-
-    try {
-      // const AZURE_STORAGE_CONNECTION_STRING =
-      //   this.configService.get<AzureConfig>('azure').connectionString;
-      // console.log('Azure Conn str:', AZURE_STORAGE_CONNECTION_STRING);
-      // const blobServiceClient = BlobServiceClient.fromConnectionString(
-      //   AZURE_STORAGE_CONNECTION_STRING,
-      // );
-      // const blob = files.materials[0];
-      // const blobName = blob.originalname;
-      // const containerClient =
-      //   blobServiceClient.getContainerClient('test-container');
-      // const createContainerResponse = await containerClient.createIfNotExists();
-      // console.log('Container created: ', createContainerResponse);
-      // const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-      // console.log('blockBlobClient', blockBlobClient);
-      // console.log(
-      //   `\nUploading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`,
-      // );
-      // const uploadBlobResponse = await blockBlobClient.uploadData(blob.buffer);4
-      /////////////////////------>>>>.>
-      // const uploadBlobResponse = await blockBlobClient.upload(
-      //   blob.buffer,
-      //   blob.buffer.length,
-      // );
-      // console.log('Upload RESPONSE', uploadBlobResponse);
-    } catch (err) {
-      console.error(err);
-    }
-
-    // console.log(files);
-
-    // const insertedModel3d = await this.models3dService.createModel3d(
-    //   modelDto,
-    //   userId,
-    // );
-
-    // this.models3dService.saveModel3d(insertedModel3d.id, userId);
-
-    // return { insertedId: insertedModel3d.id };
   }
-
-  // models/upload
-  // @Post('upload')
-  // async createModel3d(@Body() modelDto: UploadModel3dDto, @Req() req: Request) {
-  //   const userId = req['user'].sub;
-
-  //   const insertedModel3d = await this.models3dService.createModel3d(
-  //     modelDto,
-  //     userId,
-  //   );
-
-  //   this.models3dService.saveModel3d(insertedModel3d.id, userId);
-
-  //   return { insertedId: insertedModel3d.id };
-  // }
 
   // models
   @Public()
