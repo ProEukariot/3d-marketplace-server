@@ -2,7 +2,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Model3d as Model3dEntity } from 'src/typeorm/entities/model3d';
 import { User as UserEntity } from 'src/typeorm/entities/user';
-import { QueryFailedError, Repository } from 'typeorm';
+import {
+  FindOptionsRelationByString,
+  FindOptionsRelations,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import { File as FileEntity } from 'src/typeorm/entities/file';
 import { File } from '../types/file';
 import { Model3d } from '../types/model3d-body';
@@ -22,11 +27,16 @@ export class Model3dService {
     private readonly subscriptionRepository: Repository<Subscribed3dModels>,
   ) {}
 
-  async get3dModel(id: string, extras?: { user?: boolean; files?: boolean }) {
+  async get3dModel(
+    id: string,
+    relations?:
+      | FindOptionsRelationByString
+      | FindOptionsRelations<Model3dEntity>,
+  ) {
     try {
       return await this.model3dRepository.findOne({
         where: { id },
-        relations: extras,
+        relations: relations,
       });
     } catch (error) {
       throw error;
@@ -49,10 +59,35 @@ export class Model3dService {
     }
   }
 
-  async getSubscription(user: UserEntity, model3d: Model3dEntity) {
+  async getPublicFileBy3dModel(id: string) {
+    try {
+      const builder = this.filesRepository.createQueryBuilder('file');
+
+      return (
+        builder
+          // .select(['file.id', 'file.target', 'file.access', 'model.id', 'user.id'])
+          .leftJoinAndSelect('file.model3d', 'model')
+          .leftJoinAndSelect('model.user', 'user')
+          .where('model.id = :id', { id })
+          .andWhere("file.access = 'public'")
+          .getOne()
+      );
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getSubscribed3dModel(
+    user: UserEntity,
+    model3d: Model3dEntity,
+    relations?:
+      | FindOptionsRelationByString
+      | FindOptionsRelations<Subscribed3dModels>,
+  ) {
     try {
       return await this.subscriptionRepository.findOne({
         where: { user, model3d },
+        relations,
       });
     } catch (error) {
       throw error;

@@ -1,4 +1,7 @@
-import { BlobServiceClient } from '@azure/storage-blob';
+import {
+  BlobGenerateSasUrlOptions,
+  BlobServiceClient,
+} from '@azure/storage-blob';
 import { Inject, Injectable } from '@nestjs/common';
 import { BLOB_SERVICE_CLIENT } from '../constants';
 
@@ -26,6 +29,25 @@ export class BlobStorageService {
       });
 
       return uploadBlobResponse;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getBlobSasUrl(
+    containerName: string,
+    blobName: string,
+    options: BlobGenerateSasUrlOptions,
+  ) {
+    try {
+      const containerClient =
+        this.blobServiceClient.getContainerClient(containerName);
+
+      const blobClient = containerClient.getBlockBlobClient(blobName);
+
+      const sasUrl = await blobClient.generateSasUrl(options);
+
+      return sasUrl;
     } catch (err) {
       throw err;
     }

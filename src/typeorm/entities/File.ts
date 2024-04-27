@@ -20,4 +20,6 @@ export class File {
 
   @ManyToOne(() => Model3d, (model3d) => model3d.files)
   model3d: Model3d;
+
+  url?: string;
 }

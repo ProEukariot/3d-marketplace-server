@@ -43,7 +43,7 @@ export class CheckoutController {
       model.id = body.id;
 
       // Validate whether the user already owns that 3D model
-      const sub = await this.model3dService.getSubscription(user, model);
+      const sub = await this.model3dService.getSubscribed3dModel(user, model);
 
       if (sub) return new BadRequestException('The model is already owned.');
 

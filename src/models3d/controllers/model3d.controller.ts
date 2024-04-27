@@ -45,15 +45,21 @@ import { Public } from 'src/utils/skip-auth';
 import { PageParams } from '../dto/page-params';
 import { SaveModel3dDto } from '../dto/save-model3d.dto';
 import { Add3dModelDto } from '../dto/add-3dmodel.dto';
-import { BlobServiceClient } from '@azure/storage-blob';
+import {
+  BlobServiceClient,
+  ContainerSASPermissions,
+} from '@azure/storage-blob';
 import { ConfigService } from '@nestjs/config';
 import { AzureConfig } from 'interfaces/azure-config.interface';
 import { User } from 'src/shared/decorators/get-user.decorator';
 import { v4 as uuidv4 } from 'uuid';
 import { BlobStorageService } from 'src/azure/services/azure.service';
+import { NotFoundError } from 'rxjs';
 
 @Controller('models')
 export class Model3dController {
+  private readonly blobPrefixes = { container: 'usr-', blob: 'blob-' };
+
   constructor(
     private readonly fs: FileStreamService,
     private readonly models3dService: Model3dService,
@@ -89,11 +95,12 @@ export class Model3dController {
     blob: Express.Multer.File,
   ) {
     try {
-      const containerName = `usr-${user.id}`.toLowerCase();
+      const containerName =
+        `${this.blobPrefixes.container}${user.id}`.toLowerCase();
 
       // fileEntity must be with model3dEntity relation
       const blobName =
-        `${fileEntity.model3d.id}/${fileEntity.access}/${fileEntity.target}/blob-${fileEntity.id}`.toLowerCase();
+        `${fileEntity.model3d.id}/${fileEntity.access}/${fileEntity.target}/${this.blobPrefixes.blob}${fileEntity.id}`.toLowerCase();
 
       const uploadRes = await this.blobService.uploadBlob(
         containerName,
@@ -198,6 +205,70 @@ export class Model3dController {
     }
   }
 
+  @Public()
+  @Get('preview/:id')
+  async getPublicModelBlobUrl(@Param('id', new ParseUUIDPipe()) id: string) {
+    const file = await this.models3dService.getPublicFileBy3dModel(id);
+
+    console.log(file, 'Fileee');
+
+    const containerName =
+      `${this.blobPrefixes.container}${file.model3d.user.id}`.toLowerCase();
+    const blobName =
+      `${file.model3d.id}/${file.access}/${file.target}/${this.blobPrefixes.blob}${file.id}`.toLowerCase();
+
+    let date = new Date();
+    const url = await this.blobService.getBlobSasUrl(containerName, blobName, {
+      permissions: ContainerSASPermissions.parse('r'),
+      expiresOn: new Date(date.setDate(date.getDate() + 1)),
+    });
+
+    return url;
+  }
+
+  //
+  @Get(':id/blob/:blobId')
+  async getPrivateModelBlobUrl(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('blobId', new ParseUUIDPipe()) blobId: string,
+    @User() user: UserEntity,
+  ) {
+    const requestedModel = new Model3dEntity();
+    requestedModel.id = id;
+
+    const model = await this.models3dService.get3dModel(requestedModel.id, {
+      user: true,
+    });
+    if (!model) throw new NotFoundException();
+
+    const subModel = await this.models3dService.getSubscribed3dModel(
+      user,
+      requestedModel,
+      ['user', 'model3d', 'model3d.files'],
+    );
+
+    if (!subModel) return null;
+
+    const file = subModel.model3d.files.filter((f) => f.id == blobId)[0];
+
+    if (!file) throw new NotFoundException();
+
+    const containerName =
+      `${this.blobPrefixes.container}${model.user.id}`.toLowerCase();
+    const blobName =
+      `${subModel.model3d.id}/${file.access}/${file.target}/${this.blobPrefixes.blob}${file.id}`.toLowerCase();
+
+    console.log(containerName, 'containerName');
+
+    let date = new Date();
+    const url = await this.blobService.getBlobSasUrl(containerName, blobName, {
+      permissions: ContainerSASPermissions.parse('r'),
+      expiresOn: new Date(date.setDate(date.getDate() + 1)),
+    });
+
+    return url;
+  }
+
   // models/subscribed-models
   @UseInterceptors(ClassSerializerInterceptor)
   @Get('subscribed-models')
@@ -222,10 +293,12 @@ export class Model3dController {
   @Get(':id')
   async get3dModel(@Param('id', new ParseUUIDPipe()) id: string) {
     try {
-      return await this.models3dService.get3dModel(id, {
+      const model = await this.models3dService.get3dModel(id, {
         user: true,
         files: true,
       });
+
+      return model;
     } catch (error) {
       throw error;
     }
