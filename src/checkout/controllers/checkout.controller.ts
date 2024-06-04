@@ -52,8 +52,8 @@ export class CheckoutController {
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
-        success_url: `${clientUrl}/payment/success`,
-        cancel_url: `${clientUrl}/payment/failure`,
+        success_url: `${clientUrl}/explore/${model.id}`,
+        cancel_url: `${clientUrl}/explore/${model.id}`,
         line_items: [
           {
             price_data: {
@@ -68,7 +68,7 @@ export class CheckoutController {
           userId: user.id,
           itemId: body.id,
         },
-        customer_email: 'DefaultEmail@mail.com',
+        customer_email: user.email,
       });
 
       return { url: session.url };

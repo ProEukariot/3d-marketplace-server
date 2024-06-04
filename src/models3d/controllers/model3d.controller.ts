@@ -42,7 +42,7 @@ import { FileTypeValidator } from 'src/shared/validators/file-type-validator';
 import { UniqueTypeValidator } from 'src/shared/validators/unique-type-validator';
 import { UploadModel3dFilesDto } from '../dto/upload-model3d-files.dto';
 import { Public } from 'src/utils/skip-auth';
-import { PageParams } from '../dto/page-params';
+import { GetModels3dParams as Get3dModelsParams } from '../dto/page-params';
 import { SaveModel3dDto } from '../dto/save-model3d.dto';
 import { Add3dModelDto } from '../dto/add-3dmodel.dto';
 import {
@@ -114,17 +114,47 @@ export class Model3dController {
     }
   }
 
+  private saveFilesAndBlobs = async (
+    files: Express.Multer.File[],
+    relatedUser: UserEntity,
+    related3dModel: Model3dEntity,
+    targetDirectory: string,
+    access: 'public' | 'private' = 'private',
+    options?: { singleFile?: boolean },
+  ) => {
+    if (options && options.singleFile) files = new Array(files[0]);
+
+    return Promise.all(
+      files.map(async (file) => {
+        const insertedFile = await this.insertFile(
+          file,
+          related3dModel,
+          targetDirectory,
+          access,
+        );
+
+        const uploadBlobResponse = await this.uploadBlob(
+          insertedFile,
+          relatedUser,
+          file,
+        );
+
+        return { insertedFile, uploadBlobResponse };
+      }),
+    );
+  };
+
   // models/add
   @Post('add')
   @UseInterceptors(
-    FileFieldsInterceptor([{ name: 'materials' }, { name: 'models' }]),
+    FileFieldsInterceptor([{ name: 'images' }, { name: 'models' }]),
   )
   async add3dModel(
     @User() user: UserEntity,
     @Body() modelDto: Add3dModelDto,
     @UploadedFiles()
     files: {
-      materials: Express.Multer.File[];
+      images: Express.Multer.File[];
       models: Express.Multer.File[];
     },
   ) {
@@ -138,51 +168,37 @@ export class Model3dController {
 
       await this.models3dService.subscribe3dModelToUser(inserted3dModel, user);
 
-      // save preview file (modify file data here)
+      // files.models should be replaced with derived damaged file
+      const previewFilesPromise = this.saveFilesAndBlobs(
+        files.models,
+        user,
+        inserted3dModel,
+        'models',
+        'public',
+        { singleFile: true },
+      );
 
-      const savePreviewFiles = async () => {
-        const fileToSave = files.models[0];
-        const insertedFile = await this.insertFile(
-          fileToSave,
-          inserted3dModel,
-          'models',
-          'public',
-        );
-        const uploadBlobResponse = await this.uploadBlob(
-          insertedFile,
-          user,
-          fileToSave,
-        );
+      const sourceFilesPromise = this.saveFilesAndBlobs(
+        files.models,
+        user,
+        inserted3dModel,
+        'models',
+      );
 
-        return { insertedFile, uploadBlobResponse };
-      };
+      const previewImagePromise = this.saveFilesAndBlobs(
+        files.images,
+        user,
+        inserted3dModel,
+        'images',
+        'public',
+        { singleFile: true },
+      );
 
-      // save source files
-      const saveSourceFiles = async () => {
-        return Promise.all(
-          Object.keys(files).map(async (key) => {
-            return Promise.all(
-              (files[key] as Express.Multer.File[]).map(async (file) => {
-                const insertedFile = await this.insertFile(
-                  file,
-                  inserted3dModel,
-                  key,
-                );
-
-                const uploadBlobResponse = await this.uploadBlob(
-                  insertedFile,
-                  user,
-                  file,
-                );
-
-                return { insertedFile, uploadBlobResponse };
-              }),
-            );
-          }),
-        );
-      };
-
-      const res = await Promise.all([savePreviewFiles(), saveSourceFiles()]);
+      const res = await Promise.all([
+        previewFilesPromise,
+        sourceFilesPromise,
+        previewImagePromise,
+      ]);
 
       return { model: inserted3dModel };
     } catch (err) {
@@ -194,12 +210,16 @@ export class Model3dController {
   @Public()
   @UseInterceptors(ClassSerializerInterceptor)
   @Get()
-  async get3dModels(@Query() params: PageParams) {
+  async get3dModels(@Query() params: Get3dModelsParams) {
+    const pagination = { limit: params.limit, cursor: params.cursor };
+    const filtering = {
+      pattern: params.pattern,
+      minRange: params.minRange,
+      maxRange: params.maxRange,
+    };
+
     try {
-      return await this.models3dService.get3dModels(
-        params.limit,
-        params.cursor,
-      );
+      return await this.models3dService.get3dModels(pagination, filtering);
     } catch (error) {
       throw error;
     }
@@ -207,10 +227,11 @@ export class Model3dController {
 
   @Public()
   @Get('preview/:id')
-  async getPublicModelBlobUrl(@Param('id', new ParseUUIDPipe()) id: string) {
-    const file = await this.models3dService.getPublicFileBy3dModel(id);
-
-    console.log(file, 'Fileee');
+  async getPublicModelBlobUrl(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('target') target: string = 'models',
+  ) {
+    const file = await this.models3dService.getPublicFileBy3dModel(id, target);
 
     const containerName =
       `${this.blobPrefixes.container}${file.model3d.user.id}`.toLowerCase();
@@ -218,6 +239,7 @@ export class Model3dController {
       `${file.model3d.id}/${file.access}/${file.target}/${this.blobPrefixes.blob}${file.id}`.toLowerCase();
 
     let date = new Date();
+
     const url = await this.blobService.getBlobSasUrl(containerName, blobName, {
       permissions: ContainerSASPermissions.parse('r'),
       expiresOn: new Date(date.setDate(date.getDate() + 1)),
@@ -239,6 +261,7 @@ export class Model3dController {
     const model = await this.models3dService.get3dModel(requestedModel.id, {
       user: true,
     });
+
     if (!model) throw new NotFoundException();
 
     const subModel = await this.models3dService.getSubscribed3dModel(
@@ -258,13 +281,15 @@ export class Model3dController {
     const blobName =
       `${subModel.model3d.id}/${file.access}/${file.target}/${this.blobPrefixes.blob}${file.id}`.toLowerCase();
 
-    console.log(containerName, 'containerName');
-
     let date = new Date();
-    const url = await this.blobService.getBlobSasUrl(containerName, blobName, {
+    const urlPromise = this.blobService.getBlobSasUrl(containerName, blobName, {
       permissions: ContainerSASPermissions.parse('r'),
       expiresOn: new Date(date.setDate(date.getDate() + 1)),
     });
+
+    const incrementPromise = this.models3dService.incrementDownloads(model);
+
+    const [url, _] = await Promise.all([urlPromise, incrementPromise]);
 
     return url;
   }
@@ -274,16 +299,33 @@ export class Model3dController {
   @Get('subscribed-models')
   async getSubscribed3dModels(
     @User() user: UserEntity,
-    @Query() params: PageParams,
+    @Query() params: Get3dModelsParams,
   ) {
+    const pagination = { limit: params.limit, cursor: params.cursor };
+    const filtering = {
+      pattern: params.pattern,
+      minRange: params.minRange,
+      maxRange: params.maxRange,
+    };
+
     try {
       return await this.models3dService.getSubscribed3dModels(
         user,
-        params.limit,
-        params.cursor,
+        pagination,
+        filtering,
       );
     } catch (error) {
       throw error;
+    }
+  }
+
+  @Public()
+  @Get('price-range')
+  async getModelsPriceRange() {
+    try {
+      return await this.models3dService.getPriceRange();
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -303,65 +345,4 @@ export class Model3dController {
       throw error;
     }
   }
-
-  //  models/download/:id/file/:ext
-  // @Get('download/:id/file/:ext')
-  // async downloadModel3dFile(
-  //   @Param('id', new ParseUUIDPipe()) id: string,
-  //   @Param('ext') ext: string,
-  //   @Res({ passthrough: true }) res: Response,
-  //   @Req() req: Request,
-  // ) {
-  //   const userId = req['user'].sub;
-
-  //   const hasEntry = await this.models3dService.userSavedModel3d(userId, id);
-
-  //   if (!hasEntry) throw new BadRequestException('The model is not saved!');
-
-  //   const model3d = await this.models3dService.get3dModel(id);
-  //   if (!model3d) return new NotFoundException('File not found');
-
-  //   const creator = model3d.user;
-  //   const creatorId = creator.id;
-
-  //   const fileMeta = await this.models3dService.getFileByModel3d(id, ext);
-  //   if (!fileMeta) return new NotFoundException('File not found');
-
-  //   const fileName = `${fileMeta.id}.${fileMeta.name}`;
-  //   const fileDir = `../uploads/user-${creatorId}`;
-  //   const fileExt = fileMeta.name;
-  //   const model3dName = model3d.name;
-
-  //   const file = this.fs.getReadStream(fileName, fileDir);
-  //   res.set({
-  //     'Content-Type': 'application/octet-stream',
-  //     'Content-Disposition': `attachment; filename="${model3dName}.${fileExt}"`,
-  //   });
-
-  //   return new StreamableFile(file);
-  // }
-
-  //  models/save
-  // @Post('save')
-  // async saveModel3d(
-  //   @User() user: UserEntity,
-  //   @Body() modelDto: SaveModel3dDto,
-  // ) {
-  //   modelDto.id;
-
-  //   const model3d = new Model3dEntity();
-  //   model3d.id = modelDto.id;
-
-  //   try {
-  //     return await this.models3dService.subscribe3dModelToUser(model3d, user);
-  //   } catch (error) {
-  //     if (error.number == 2627) {
-  //       return new BadRequestException(
-  //         'The 3D model is already saved for that user',
-  //       );
-  //     }
-
-  //     return new InternalServerErrorException('An unexpected error occurred');
-  //   }
-  // }
 }

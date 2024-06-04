@@ -7,12 +7,21 @@ import {
   FindOptionsRelations,
   QueryFailedError,
   Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
 import { File as FileEntity } from 'src/typeorm/entities/file';
 import { File } from '../types/file';
 import { Model3d } from '../types/model3d-body';
 import { Subscribed3dModels } from 'src/typeorm/entities/subscribed-models3d';
 import { Range } from 'interfaces/range.interface';
+import { access } from 'fs';
+
+export type FilterOptions = {
+  pattern?: string;
+  minRange?: number;
+  maxRange?: number;
+};
+export type PageOptions = { limit: number; cursor?: string };
 
 @Injectable()
 export class Model3dService {
@@ -26,6 +35,40 @@ export class Model3dService {
     @InjectRepository(Subscribed3dModels)
     private readonly subscriptionRepository: Repository<Subscribed3dModels>,
   ) {}
+
+  private apply3dModelsFilters(
+    qb: SelectQueryBuilder<Model3dEntity>,
+    filtering: FilterOptions,
+  ) {
+    if (filtering.pattern)
+      qb.andWhere('model.name LIKE :pattern', {
+        pattern: `%${filtering.pattern}%`,
+      });
+
+    if (filtering.minRange)
+      qb.andWhere('model.price >= :minRange', {
+        minRange: filtering.minRange,
+      });
+
+    if (filtering.maxRange)
+      qb.andWhere('model.price <= :maxRange', {
+        maxRange: filtering.maxRange,
+      });
+
+    return qb;
+  }
+
+  private apply3dModelsPagination(
+    qb: SelectQueryBuilder<Model3dEntity>,
+    pagination: PageOptions,
+  ) {
+    if (pagination.cursor)
+      qb.andWhere('model.id > :cursor', {
+        cursor: atob(pagination.cursor),
+      });
+
+    return qb;
+  }
 
   async get3dModel(
     id: string,
@@ -43,23 +86,26 @@ export class Model3dService {
     }
   }
 
-  async get3dModels(limit: number, cursor?: string) {
+  async get3dModels(pagination: PageOptions, filtering: FilterOptions) {
     try {
       const queryBuilder = this.model3dRepository.createQueryBuilder('model');
 
-      if (cursor)
-        queryBuilder.where('model.id > :cursor', { cursor: atob(cursor) });
+      queryBuilder.where('1 = 1');
 
-      return await queryBuilder
-        .orderBy('model.id', 'ASC')
-        .take(limit)
-        .getMany();
+      this.apply3dModelsFilters(queryBuilder, filtering);
+      this.apply3dModelsPagination(queryBuilder, pagination);
+
+      queryBuilder.orderBy('model.id', 'ASC').take(pagination.limit);
+
+      // console.log(queryBuilder.getQuery());
+
+      return await queryBuilder.getMany();
     } catch (error) {
       throw error;
     }
   }
 
-  async getPublicFileBy3dModel(id: string) {
+  async getPublicFileBy3dModel(id: string, target: string) {
     try {
       const builder = this.filesRepository.createQueryBuilder('file');
 
@@ -69,12 +115,18 @@ export class Model3dService {
           .leftJoinAndSelect('file.model3d', 'model')
           .leftJoinAndSelect('model.user', 'user')
           .where('model.id = :id', { id })
-          .andWhere("file.access = 'public'")
+          .andWhere('file.access = :access', { access: 'public' })
+          .andWhere('file.target = :target', { target })
           .getOne()
       );
     } catch (err) {
       throw err;
     }
+  }
+
+  async incrementDownloads(model3d: Model3dEntity) {
+    model3d.downloads++;
+    return await this.model3dRepository.save(model3d);
   }
 
   async getSubscribed3dModel(
@@ -96,33 +148,27 @@ export class Model3dService {
 
   async getSubscribed3dModels(
     user: UserEntity,
-    limit: number,
-    cursor?: string,
+    pagination: PageOptions,
+    filtering: FilterOptions,
   ) {
     try {
-      const queryBuilder =
-        this.subscriptionRepository.createQueryBuilder('subscribedModel');
+      const queryBuilder = this.model3dRepository.createQueryBuilder('model');
 
-      queryBuilder
-        .leftJoinAndSelect(
-          'subscribedModel.model3d',
-          // Model3dEntity,
-          'model',
-          'subscribedModel.model3dId = model.id',
-        )
-        .where('subscribedModel.userId = :id', { id: user.id });
+      queryBuilder.innerJoin(
+        'model.savedModels',
+        'savedModels',
+        'model.id = savedModels.model3dId AND savedModels.userId = :userId',
+        { userId: user.id },
+      );
 
-      if (cursor)
-        queryBuilder.andWhere('model.id > :cursor', { cursor: atob(cursor) });
+      queryBuilder.where('1 = 1');
 
-      queryBuilder.orderBy('model.id', 'ASC').take(limit);
+      this.apply3dModelsFilters(queryBuilder, filtering);
+      this.apply3dModelsPagination(queryBuilder, pagination);
 
-      // console.log(queryBuilder.getSql());
+      queryBuilder.orderBy('model.id', 'ASC').take(pagination.limit);
 
-      const subscribed3dModels = await queryBuilder.getMany();
-      const models = subscribed3dModels.map((sm) => sm.model3d);
-
-      return models;
+      return await queryBuilder.getMany();
     } catch (error) {
       throw error;
     }
@@ -159,45 +205,18 @@ export class Model3dService {
     } catch (error) {
       throw error;
     }
-
-    // const userPromise = this.userRepository.findOneOrFail({
-    //   where: { id: userId },
-    //   select: { id: true },
-    // });
-    // const model3dPromise = this.model3dRepository.findOneOrFail({
-    //   where: { id: model3dId },
-    //   select: { id: true },
-    // });
-
-    // const [user, model3d] = await Promise.all([userPromise, model3dPromise]);
-
-    // const savedModel = new SavedModel();
-    // savedModel.model3d = model3d;
-    // savedModel.user = user;
-    // return await this.savedModelsRepository.save(savedModel);
   }
 
-  // async getFile(id: string) {
-  //   try {
-  //     return await this.filesRepository.findOneOrFail({
-  //       where: { id },
-  //       relations: {
-  //         model3d: true,
-  //       },
-  //     });
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // }
+  async getPriceRange() {
+    try {
+      const minPromise = this.model3dRepository.minimum('price');
+      const maxPromise = this.model3dRepository.maximum('price');
 
-  // async getUserByFileId(fileId: string) {
-  //   const queryBuilder = this.userRepository.createQueryBuilder('user');
+      const [min, max] = await Promise.all([minPromise, maxPromise]);
 
-  //   const user = await queryBuilder
-  //     .leftJoinAndSelect('user.models', 'models')
-  //     .leftJoinAndSelect('models.files', 'files')
-  //     .getOne();
-
-  //   return user;
-  // }
+      return { min, max };
+    } catch (error) {
+      throw error;
+    }
+  }
 }

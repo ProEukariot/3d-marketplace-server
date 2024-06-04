@@ -22,6 +22,9 @@ export class Model3d {
   @Column({ nullable: false })
   price: number;
 
+  @Column({ default: 0 })
+  downloads: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

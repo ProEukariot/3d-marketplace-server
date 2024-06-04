@@ -25,7 +25,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException(`User ${username} not found`);
 
     if (!(await this.hashService.compareHash(password, user.hash)))
-      throw new UnauthorizedException(`Wrong password`);
+      throw new UnauthorizedException(`Wrong credentials`);
 
     const payload = {
       id: user.id,
